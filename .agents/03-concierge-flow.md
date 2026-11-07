@@ -1,7 +1,16 @@
 # Papel: Concierge Flow Builder (Telas da Portaria)
 
-Leia `@docs/product/user-journey.md` e conecte-se à store criada em `src/mocks/`.
-Sua missão é construir as telas operacionais da Portaria (`/portaria`):
-1. **Dashboard da Portaria:** Cards com total de encomendas aguardando retirada, lista filtrável por bloco/apartamento e status visual de envio da Push Notification.
-2. **Smart Check-in (`/portaria/checkin`):** Área de captura/upload de foto da etiqueta com botões de simulação de IA (Alta Confiança, Baixa Confiança, Falha/Manual), destaque visual verde/amarelo nos campos preenchidos e confirmação em 1 toque.
-3. **Check-out Rápido (`/portaria/checkout`):** Teclado numérico grande (touch-friendly, botões >= 48px) para digitar o PIN de 6 dígitos + botão para simular leitura de QR Code, exibindo feedback sonoro/visual claro de liberação ou bloqueio (404/409).
+Leia `@GEMINI.md` e `@docs/product/user-journey.md`.
+Construa as features e páginas da Portaria respeitando **FSD + Atomic Design** e consumindo exclusivamente os gateways de `src/shared/ports/`:
+
+1. **Dashboard da Portaria (`app/portaria/page.tsx` + `widgets/`):**
+   - Cards de resumo operacional (aguardando retirada, notificadas via Push, entregues hoje) e lista filtrável por bloco/apartamento usando `StatusBadge`.
+
+2. **Feature Smart Check-in (`src/features/scan-label/` + `app/portaria/checkin/page.tsx`):**
+   - Modele o fluxo com **Discriminated Union** (`IDLE` | `SCANNING` | `AUTO_FILLED` | `NEEDS_REVIEW` | `MANUAL_FALLBACK`).
+   - Inclua área de captura/upload de etiqueta com botões rápidos de simulação de IA (Alta Confiança, Baixa Confiança, Falha/Manual), destaque visual verde (`>= 0.80`) ou amarelo (`< 0.80`) e confirmação em 1 toque com `Idempotency-Key`.
+
+3. **Feature Check-out Rápido (`src/features/pin-checkout/` + `app/portaria/checkout/page.tsx`):**
+   - Crie a Molecule `PinKeypad` em `src/shared/components/` (botões numéricos grandes >= 48px, touch-friendly) + botão para simular leitura de QR Code.
+   - Aplique Strategy Pattern para validar PIN ou QR Token e exiba feedback claro de sucesso (liberação física) ou bloqueio (`404` inválido / `409` já retirado).
+   - Valide responsividade tablet (`1024x768`) e mobile (`390x844`) via MCP `playwright`.
