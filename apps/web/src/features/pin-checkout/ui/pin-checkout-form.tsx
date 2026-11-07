@@ -6,36 +6,60 @@ import { PackageItem } from "@/entities/package/model/types"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/ui/card"
 import { toast } from "sonner"
-import { CheckCircle2, QrCode, KeyRound, AlertTriangle, ArrowRight, PackageCheck } from "lucide-react"
+import { KeyRound, CheckCircle2, AlertTriangle, Delete, QrCode } from "lucide-react"
 
 export function PinCheckoutForm() {
-  const [code, setCode] = useState("")
+  const [pin, setPin] = useState<string>("")
+  const [qrTokenInput, setQrTokenInput] = useState<string>("")
+  const [inputMode, setInputMode] = useState<"PIN" | "QR">("PIN")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deliveredPackage, setDeliveredPackage] = useState<PackageItem | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
-  async function handleCheckout(e: React.FormEvent) {
-    e.preventDefault()
-    if (!code.trim()) {
-      toast.error("Informe o PIN de 6 dígitos ou Token do QR Code")
-      return
-    }
+  function handleKeypadPress(digit: string) {
+    if (pin.length >= 6) return
+    const nextPin = pin + digit
+    setPin(nextPin)
+    setErrorMessage(null)
 
+    if (nextPin.length === 6) {
+      submitCheckout(nextPin, "PIN")
+    }
+  }
+
+  function handleBackspace() {
+    setPin((prev) => prev.slice(0, -1))
+    setErrorMessage(null)
+  }
+
+  function handleClear() {
+    setPin("")
+    setErrorMessage(null)
+  }
+
+  async function submitCheckout(token: string, method: "PIN" | "QR") {
     try {
       setIsSubmitting(true)
       setErrorMessage(null)
+
       const res = await packagePort.checkoutPackage({
-        code: code.trim(),
-        codeType: code.trim().length === 6 ? "PIN" : "QR",
+        code: token,
+        codeType: method,
       })
 
-      setDeliveredPackage(res.packageItem)
-      toast.success(res.message)
-      setCode("")
+      if (res.success && res.packageItem) {
+        setDeliveredPackage(res.packageItem)
+        toast.success("Baixa confirmada com sucesso!", {
+          description: `Encomenda entregue para ${res.packageItem.recipientNameRaw} (${res.packageItem.unit?.block}-${res.packageItem.unit?.number})`,
+        })
+      } else {
+        const msg = res.message || "Código inválido ou encomenda já baixada"
+        setErrorMessage(msg)
+        toast.error(msg)
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Falha na validação da retirada"
+      const msg = err instanceof Error ? err.message : "Falha na comunicação com a API"
       setErrorMessage(msg)
       toast.error(msg)
     } finally {
@@ -44,125 +68,202 @@ export function PinCheckoutForm() {
   }
 
   function handleReset() {
+    setPin("")
+    setQrTokenInput("")
     setDeliveredPackage(null)
     setErrorMessage(null)
-    setCode("")
   }
 
   return (
-    <Card className="border-slate-200 bg-white shadow-xs max-w-xl mx-auto">
-      <CardHeader>
+    <div className="rounded-lg border border-zinc-200/90 bg-white shadow-xs max-w-md mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
         <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600">
-            <KeyRound className="size-5" />
+          <div className="size-11 rounded-lg bg-zinc-900 text-white flex items-center justify-center shadow-xs">
+            <KeyRound className="size-5 text-[#E1FF01]" />
           </div>
           <div>
-            <CardTitle className="text-lg font-bold text-slate-900">
-              Validar Retirada (Check-out)
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-500">
-              Digite o PIN numérico de 6 dígitos ou cole o Token do QR Code apresentado pelo morador
-            </CardDescription>
+            <h3 className="text-base font-extrabold text-zinc-950">Validar Retirada</h3>
+            <p className="text-xs text-zinc-500">Baixa rápida com PIN de 6 dígitos</p>
           </div>
         </div>
-      </CardHeader>
 
-      <CardContent>
-        {deliveredPackage ? (
-          <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-center space-y-4 animate-in zoom-in-95">
-            <div className="inline-flex size-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm mx-auto">
-              <CheckCircle2 className="size-8" />
+        {/* Toggle Mode */}
+        <div className="flex bg-zinc-100 p-1 rounded-lg text-xs font-semibold">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setInputMode("PIN")
+              handleReset()
+            }}
+            className={`px-3 py-1 rounded-lg transition-all h-7 ${
+              inputMode === "PIN" ? "bg-white text-zinc-950 shadow-2xs font-bold" : "text-zinc-500 hover:text-zinc-900"
+            }`}
+          >
+            PIN
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setInputMode("QR")
+              handleReset()
+            }}
+            className={`px-3 py-1 rounded-lg transition-all h-7 ${
+              inputMode === "QR" ? "bg-white text-zinc-950 shadow-2xs font-bold" : "text-zinc-500 hover:text-zinc-900"
+            }`}
+          >
+            QR Token
+          </Button>
+        </div>
+      </div>
+
+      {deliveredPackage ? (
+        /* Success State */
+        <div className="p-6 rounded-lg bg-emerald-50/80 border border-emerald-200 text-center space-y-4 animate-in zoom-in-95">
+          <div className="size-14 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-sm mx-auto">
+            <CheckCircle2 className="size-8" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-lg">
+              Entrega Confirmada
+            </span>
+            <h3 className="text-lg font-extrabold text-emerald-950 mt-1">
+              {deliveredPackage.recipientNameRaw}
+            </h3>
+            <p className="text-xs text-emerald-800 font-semibold mt-0.5">
+              Bloco {deliveredPackage.unit?.block} &bull; Apto {deliveredPackage.unit?.number}
+            </p>
+            <p className="text-[11px] text-emerald-700 font-mono mt-1">
+              Rastreio: {deliveredPackage.trackingCode}
+            </p>
+          </div>
+          <div className="pt-2">
+            <Button
+              onClick={handleReset}
+              className="rounded-lg bg-emerald-800 hover:bg-emerald-900 text-white font-semibold text-xs px-5 h-9"
+            >
+              Nova Baixa
+            </Button>
+          </div>
+        </div>
+      ) : inputMode === "PIN" ? (
+        /* Large Touch Keypad (>= 48px) */
+        <div className="space-y-6">
+          {/* PIN Digit Slots */}
+          <div className="flex justify-center gap-2.5">
+            {[0, 1, 2, 3, 4, 5].map((index) => {
+              const char = pin[index]
+              const isCurrent = pin.length === index
+              return (
+                <div
+                  key={index}
+                  className={`size-11 sm:size-12 rounded-lg flex items-center justify-center text-xl font-extrabold font-mono transition-all border ${
+                    char
+                      ? "bg-zinc-900 text-[#E1FF01] border-zinc-900 shadow-2xs scale-105"
+                      : isCurrent
+                      ? "border-zinc-900 bg-white ring-2 ring-zinc-900/10"
+                      : "border-zinc-200 bg-zinc-50/80 text-zinc-400"
+                  }`}
+                >
+                  {char || ""}
+                </div>
+              )
+            })}
+          </div>
+
+          {errorMessage && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs animate-in fade-in">
+              <AlertTriangle className="size-4 shrink-0" />
+              <span>{errorMessage}</span>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-emerald-950">
-                Baixa Concluída com Sucesso!
-              </h3>
-              <p className="text-sm text-emerald-800 mt-1">
-                Encomenda entregue para{" "}
-                <span className="font-semibold">{deliveredPackage.recipientNameRaw}</span>
-              </p>
-              <p className="text-xs text-emerald-700">
-                Unidade: Bloco {deliveredPackage.unit?.block} — Apto {deliveredPackage.unit?.number}{" "}
-                &bull; Rastreio: {deliveredPackage.trackingCode}
-              </p>
-            </div>
-            <div className="pt-2">
-              <Button
-                onClick={handleReset}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium text-xs"
+          )}
+
+          {/* Numeric Keypad Grid */}
+          <div className="grid grid-cols-3 gap-2.5 max-w-xs mx-auto">
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((num) => (
+              <button
+                key={num}
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => handleKeypadPress(num)}
+                className="h-14 rounded-lg bg-zinc-50 hover:bg-zinc-100/90 active:bg-zinc-200 border border-zinc-200/80 text-xl font-bold text-zinc-900 transition-all select-none shadow-2xs cursor-pointer"
               >
-                Nova Validação de Retirada
-              </Button>
+                {num}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              disabled={isSubmitting || pin.length === 0}
+              onClick={handleClear}
+              className="h-14 rounded-lg bg-zinc-50 hover:bg-zinc-100 text-xs font-bold text-zinc-500 border border-zinc-200/80 transition-all select-none cursor-pointer"
+            >
+              C
+            </button>
+
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => handleKeypadPress("0")}
+              className="h-14 rounded-lg bg-zinc-50 hover:bg-zinc-100/90 active:bg-zinc-200 border border-zinc-200/80 text-xl font-bold text-zinc-900 transition-all select-none shadow-2xs cursor-pointer"
+            >
+              0
+            </button>
+
+            <button
+              type="button"
+              disabled={isSubmitting || pin.length === 0}
+              onClick={handleBackspace}
+              className="h-14 rounded-lg bg-zinc-50 hover:bg-zinc-100 flex items-center justify-center text-zinc-600 border border-zinc-200/80 transition-all select-none cursor-pointer"
+            >
+              <Delete className="size-5" />
+            </button>
+          </div>
+
+          <div className="text-center">
+            <p className="text-[11px] text-zinc-400">
+              Digite o PIN de 6 dígitos gerado no passe do morador.
+            </p>
+          </div>
+        </div>
+      ) : (
+        /* QR Code Token Input Mode */
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold text-zinc-700">Token UUID do QR Code</Label>
+            <div className="relative">
+              <QrCode className="absolute left-3.5 top-3 size-4 text-zinc-400 pointer-events-none" />
+              <Input
+                type="text"
+                placeholder="Cole ou leia o token do QR Code"
+                value={qrTokenInput}
+                onChange={(e) => setQrTokenInput(e.target.value)}
+                className="w-full h-10 rounded-lg border border-zinc-200 bg-zinc-50 pl-10 pr-3 font-mono text-xs focus-visible:bg-white focus-visible:border-zinc-900"
+              />
             </div>
           </div>
-        ) : (
-          <form onSubmit={handleCheckout} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="checkout-code" className="text-xs font-semibold text-slate-700">
-                PIN de Retirada (6 dígitos) ou QR Token
-              </Label>
-              <div className="relative">
-                <Input
-                  id="checkout-code"
-                  type="text"
-                  placeholder="Ex: 482910"
-                  value={code}
-                  onChange={(e) => {
-                    setCode(e.target.value)
-                    if (errorMessage) setErrorMessage(null)
-                  }}
-                  className="font-mono text-center text-xl tracking-widest h-12 uppercase border-slate-300 focus-visible:ring-indigo-600"
-                  autoFocus
-                />
-                <div className="absolute right-3 top-3 text-slate-400">
-                  <QrCode className="size-5" />
-                </div>
-              </div>
-            </div>
 
-            {errorMessage && (
-              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs animate-in fade-in">
-                <AlertTriangle className="size-4 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold">Não foi possível dar baixa:</p>
-                  <p>{errorMessage}</p>
-                </div>
-              </div>
-            )}
-
-            <div className="pt-2">
-              <Button
-                type="submit"
-                disabled={isSubmitting || !code.trim()}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold h-11"
-              >
-                {isSubmitting ? (
-                  "Validando no banco..."
-                ) : (
-                  <>
-                    <PackageCheck className="size-4 mr-1.5" />
-                    Validar e Concluir Entrega
-                  </>
-                )}
-              </Button>
+          {errorMessage && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
+              <AlertTriangle className="size-4 shrink-0" />
+              <span>{errorMessage}</span>
             </div>
+          )}
 
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-500 space-y-1">
-              <p className="font-medium text-slate-700 flex items-center gap-1.5">
-                <span className="size-1.5 rounded-full bg-indigo-600" />
-                Dica para teste rápido de demonstração:
-              </p>
-              <p>
-                Use o PIN <code className="font-mono font-bold text-indigo-700">482910</code>{" "}
-                (Mariana - Bloco B 402) ou{" "}
-                <code className="font-mono font-bold text-indigo-700">194820</code> (Carlos - Bloco
-                A 101).
-              </p>
-            </div>
-          </form>
-        )}
-      </CardContent>
-    </Card>
+          <Button
+            type="button"
+            disabled={isSubmitting || !qrTokenInput.trim()}
+            onClick={() => submitCheckout(qrTokenInput, "QR")}
+            className="w-full h-10 rounded-lg bg-zinc-900 hover:bg-black text-white font-semibold text-xs shadow-xs"
+          >
+            {isSubmitting ? "Validando Token..." : "Validar e Baixar"}
+          </Button>
+        </div>
+      )}
+    </div>
   )
 }
-

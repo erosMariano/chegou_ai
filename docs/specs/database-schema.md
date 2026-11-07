@@ -118,6 +118,7 @@ CREATE TABLE residents (
     unit_id UUID NOT NULL REFERENCES units(id) ON DELETE RESTRICT,
     full_name VARCHAR(150) NOT NULL,
     email VARCHAR(150) NOT NULL,
+    phone VARCHAR(20), -- Celular/WhatsApp (ADR-006, ex: '(11) 98765-4321' ou E.164)
     document_last4 CHAR(4),
     is_primary BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

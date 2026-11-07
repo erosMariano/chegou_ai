@@ -1,7 +1,9 @@
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import "./globals.css"
-import { DevRoleSwitcher } from "@/widgets/dev-role-switcher/ui/dev-role-switcher"
+import { AuthProvider } from "@/entities/user/ui/auth-provider"
+import { SessionHeader } from "@/widgets/session-header/ui/session-header"
+import { DevToolsDrawer } from "@/shared/dev-tools/dev-tools-drawer"
 import { Toaster } from "@/shared/ui/sonner"
 
 const inter = Inter({
@@ -27,10 +29,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable} ${mono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 font-sans">
-        <DevRoleSwitcher />
-        <main className="flex-1">{children}</main>
-        <Toaster position="top-right" richColors />
+      <body className="min-h-full flex flex-col bg-[#F4F4F3] text-zinc-900 font-sans">
+        <AuthProvider>
+          <SessionHeader />
+          <main className="flex-1">{children}</main>
+          <DevToolsDrawer />
+          <Toaster position="top-right" richColors />
+        </AuthProvider>
       </body>
     </html>
   )

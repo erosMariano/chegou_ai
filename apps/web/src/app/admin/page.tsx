@@ -1,96 +1,99 @@
 import { packagePort } from "@/shared/ports"
+import { AdminHeader } from "@/widgets/admin-header/ui/admin-header"
 import { AuditLogTableWidget } from "@/widgets/audit-log-table/ui/audit-log-table-widget"
-import { ShieldCheck, Activity, Clock, Zap, Lock } from "lucide-react"
+import { ShieldCheck, Activity, Clock, Zap, Lock, ArrowUpRight } from "lucide-react"
 
 export default async function AdminPage() {
   const events = await packagePort.listEvents()
   const packages = await packagePort.listPackages()
 
   const deliveredCount = packages.filter((p) => p.status === "DELIVERED").length
-  const pendingCount = packages.filter((p) => p.status !== "DELIVERED").length
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-      {/* Admin Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-slate-900 text-white shadow-xs">
-            <ShieldCheck className="size-6 text-indigo-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Painel de Governança & Auditoria
-            </h1>
-            <p className="text-xs text-slate-500">
-              Trilha imutável append-only conforme ADR-002 e LGPD &bull; Condomínio Solar das
-              Palmeiras
-            </p>
-          </div>
-        </div>
+    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+      <AdminHeader />
 
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-            <Lock className="size-3.5 text-indigo-600" />
-            Trilha Imutável (PostgreSQL)
-          </span>
-        </div>
-      </div>
-
-      {/* KPI Cards */}
+      {/* Vault-Style Bento Grid KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span>Tempo Médio Check-in</span>
-            <Clock className="size-4 text-indigo-500" />
+        {/* KPI 1 */}
+        <div className="rounded-lg bg-white border border-zinc-200/90 p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              Tempo Médio Check-in
+            </span>
+            <div className="size-8 rounded-lg bg-zinc-100 text-zinc-700 flex items-center justify-center">
+              <Clock className="size-4" />
+            </div>
           </div>
-          <p className="text-2xl font-extrabold text-slate-900">4.2s</p>
-          <p className="text-[11px] text-emerald-600 font-semibold">&bull; Meta PRD &lt; 10s</p>
-        </div>
-
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span>Precisão OCR / IA</span>
-            <Zap className="size-4 text-amber-500" />
-          </div>
-          <p className="text-2xl font-extrabold text-slate-900">95.2%</p>
-          <p className="text-[11px] text-emerald-600 font-semibold">&bull; Gemini 2.5 Flash</p>
-        </div>
-
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span>Retiradas Entregues</span>
-            <Activity className="size-4 text-emerald-500" />
-          </div>
-          <p className="text-2xl font-extrabold text-slate-900">{deliveredCount}</p>
-          <p className="text-[11px] text-slate-500">Idempotência &amp; ACID</p>
-        </div>
-
-        <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-1">
-          <div className="flex items-center justify-between text-slate-500 text-xs">
-            <span>Extravios / Fraudes</span>
-            <ShieldCheck className="size-4 text-emerald-600" />
-          </div>
-          <p className="text-2xl font-extrabold text-emerald-600">0%</p>
-          <p className="text-[11px] text-emerald-600 font-semibold">&bull; Validação por PIN/QR</p>
-        </div>
-      </div>
-
-      {/* Audit Log Table */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-bold text-slate-900">Trilha de Eventos Auditáveis</h2>
-            <p className="text-xs text-slate-500">
-              Registros append-only em tempo real de criação, envio de push e baixas efetuadas.
-            </p>
+            <p className="text-3xl font-extrabold tracking-tight text-zinc-950">4.2s</p>
+            <p className="text-[11px] font-bold text-emerald-700 mt-0.5">&bull; Meta PRD &lt; 10s</p>
           </div>
-          <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2.5 py-1 rounded border border-slate-200">
-            {events.length} eventos registrados
-          </span>
+          <div className="w-full h-1.5 bg-zinc-100 rounded-lg overflow-hidden">
+            <div className="bg-emerald-500 h-full w-[42%]" />
+          </div>
         </div>
 
-        <AuditLogTableWidget events={events} />
+        {/* KPI 2 */}
+        <div className="rounded-lg bg-white border border-zinc-200/90 p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              Precisão da IA
+            </span>
+            <div className="size-8 rounded-lg bg-zinc-900 text-[#E1FF01] flex items-center justify-center">
+              <Zap className="size-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-3xl font-extrabold tracking-tight text-zinc-950">95.2%</p>
+            <p className="text-[11px] font-bold text-zinc-700 mt-0.5">&bull; Gemini 2.5 Flash</p>
+          </div>
+          <div className="w-full h-1.5 bg-zinc-100 rounded-lg overflow-hidden">
+            <div className="bg-[#E1FF01] h-full w-[95%]" />
+          </div>
+        </div>
+
+        {/* KPI 3 */}
+        <div className="rounded-lg bg-white border border-zinc-200/90 p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              Baixas Realizadas
+            </span>
+            <div className="size-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+              <Activity className="size-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-3xl font-extrabold tracking-tight text-zinc-950">{deliveredCount}</p>
+            <p className="text-[11px] font-medium text-zinc-500 mt-0.5">Validações atômicas</p>
+          </div>
+          <div className="w-full h-1.5 bg-zinc-100 rounded-lg overflow-hidden">
+            <div className="bg-emerald-600 h-full w-[65%]" />
+          </div>
+        </div>
+
+        {/* KPI 4 */}
+        <div className="rounded-lg bg-white border border-zinc-200/90 p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              Extravios / Fraudes
+            </span>
+            <div className="size-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
+              <ShieldCheck className="size-4" />
+            </div>
+          </div>
+          <div>
+            <p className="text-3xl font-extrabold tracking-tight text-emerald-700">0%</p>
+            <p className="text-[11px] font-bold text-emerald-700 mt-0.5">&bull; Validação por PIN/QR</p>
+          </div>
+          <div className="w-full h-1.5 bg-zinc-100 rounded-lg overflow-hidden">
+            <div className="bg-emerald-500 h-full w-full" />
+          </div>
+        </div>
       </div>
+
+      {/* Audit Log Timeline */}
+      <AuditLogTableWidget events={events} />
     </div>
   )
 }

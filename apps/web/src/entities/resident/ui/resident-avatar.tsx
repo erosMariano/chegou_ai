@@ -17,7 +17,7 @@ export function ResidentAvatar({ name, className }: ResidentAvatarProps) {
   return (
     <div
       className={cn(
-        "size-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-medium text-xs border border-indigo-200 select-none",
+        "size-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-medium text-xs border border-indigo-200 select-none",
         className
       )}
     >

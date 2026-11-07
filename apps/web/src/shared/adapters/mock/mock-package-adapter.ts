@@ -160,6 +160,11 @@ class MockPackageAdapterImpl implements PackagePort {
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
   }
+
+  resetData(): void {
+    this.packages = [...INITIAL_PACKAGES]
+    this.events = [...INITIAL_EVENTS]
+  }
 }
 
 export const mockPackageAdapter = new MockPackageAdapterImpl()

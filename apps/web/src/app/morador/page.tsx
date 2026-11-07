@@ -2,12 +2,11 @@ import { packagePort } from "@/shared/ports"
 import { ResidentQrWidget } from "@/widgets/resident-qr-widget/ui/resident-qr-widget"
 import { PushSubscriptionBanner } from "@/features/push-subscription/ui/push-subscription-banner"
 import { PackageCard } from "@/entities/package/ui/package-card"
-import { ResidentAvatar } from "@/entities/resident/ui/resident-avatar"
-import { User, Bell, PackageOpen } from "lucide-react"
+import { PackageOpen, Sparkles } from "lucide-react"
 
 export default async function MoradorPage() {
   const allPackages = await packagePort.listPackages()
-  // Mariana Costa Silva's unit is Bloco B - 402
+  // Mariana Costa Silva: Bloco B - 402
   const residentPackages = allPackages.filter(
     (p) => p.unit?.block === "B" && p.unit?.number === "402"
   )
@@ -16,54 +15,60 @@ export default async function MoradorPage() {
     residentPackages[0]
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
-      {/* Resident Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
-        <div className="flex items-center gap-3">
-          <ResidentAvatar name="Mariana Costa Silva" className="size-11 text-sm font-bold" />
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-              Olá, Mariana Costa Silva
+    <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+      {/* Resident Welcome */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-950 tracking-tight">
+              Olá, Mariana Costa 👋
             </h1>
-            <p className="text-xs text-slate-500">
-              Bloco B &bull; Apartamento 402 &bull; Condomínio Solar das Palmeiras
-            </p>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
+              Moradora
+            </span>
           </div>
+          <p className="text-xs text-zinc-500">
+            Bloco B &bull; Apartamento 402 &bull; Condomínio Solar das Palmeiras
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span className="size-2 rounded-full bg-emerald-500 animate-ping" />
-            Morador Conectado
-          </span>
+        <div className="flex items-center gap-1.5 text-xs text-zinc-500 bg-white px-3 py-1.5 rounded-lg border border-zinc-200/90 shadow-2xs self-start sm:self-auto">
+          <Sparkles className="size-3 text-[#E1FF01] fill-zinc-900" />
+          <span>Notificações Automáticas</span>
         </div>
       </div>
 
       {/* Web Push Banner */}
       <PushSubscriptionBanner />
 
-      {/* Hero QR Code Card */}
+      {/* Apple Wallet Style Digital Pass */}
       {activePackage ? (
         <div className="py-2">
           <ResidentQrWidget packageItem={activePackage} />
         </div>
       ) : (
-        <div className="text-center py-12 bg-white rounded-2xl border border-slate-200 p-8 space-y-3">
-          <div className="inline-flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+        <div className="text-center py-14 bg-white rounded-lg border border-zinc-200/90 p-8 space-y-3 shadow-2xs">
+          <div className="size-12 rounded-lg bg-zinc-100 text-zinc-400 flex items-center justify-center mx-auto">
             <PackageOpen className="size-6" />
           </div>
-          <p className="text-sm font-semibold text-slate-800">Você não tem pacotes pendentes!</p>
-          <p className="text-xs text-slate-500">
-            Assim que uma nova entrega der entrada na portaria, você receberá uma notificação aqui.
+          <p className="text-sm font-bold text-zinc-900">Nenhum pacote pendente para sua unidade</p>
+          <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+            Quando o porteiro receber uma entrega para o Bloco B 402, seu passe de retirada aparecerá aqui.
           </p>
         </div>
       )}
 
       {/* Package History */}
       <div className="space-y-3 pt-4">
-        <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-          Histórico de Encomendas da Unidade
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
+            Histórico de Encomendas da Unidade
+          </h2>
+          <span className="text-[11px] font-semibold text-zinc-400">
+            {residentPackages.length} registro(s)
+          </span>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {residentPackages.map((pkg) => (
             <PackageCard key={pkg.id} packageItem={pkg} />

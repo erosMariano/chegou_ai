@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Bell, CheckCircle2, Shield } from "lucide-react"
+import { Bell, CheckCircle2 } from "lucide-react"
 import { Button } from "@/shared/ui/button"
 import { toast } from "sonner"
 
@@ -11,26 +11,25 @@ export function PushSubscriptionBanner() {
 
   async function handleSubscribe() {
     setIsLoading(true)
-    // Simulate Service Worker PushSubscription creation + VAPID key exchange
     setTimeout(() => {
       setIsSubscribed(true)
       setIsLoading(false)
       toast.success("Notificações Push ativadas com sucesso!", {
-        description: "Você receberá alertas em tempo real quando chegar uma encomenda.",
+        description: "Você receberá o passe digital assim que uma encomenda chegar.",
       })
     }, 600)
   }
 
   if (isSubscribed) {
     return (
-      <div className="flex items-center justify-between p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
+      <div className="flex items-center justify-between p-3.5 rounded-lg bg-emerald-50/80 border border-emerald-200 text-emerald-800 text-xs">
         <div className="flex items-center gap-2">
           <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
           <span>
-            <strong>Web Push Ativo:</strong> Alertas em tempo real ativados para este dispositivo.
+            <strong>Web Push Conectado:</strong> Alertas em tempo real ativados para este celular.
           </span>
         </div>
-        <span className="text-[11px] font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300">
+        <span className="text-[10px] font-mono font-bold bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-lg border border-emerald-300">
           VAPID OK
         </span>
       </div>
@@ -38,29 +37,29 @@ export function PushSubscriptionBanner() {
   }
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-xl bg-indigo-50 border border-indigo-200 text-slate-800">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-lg bg-white border border-zinc-200/90 shadow-2xs text-zinc-900">
       <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-indigo-100 text-indigo-700 shrink-0">
-          <Bell className="size-4" />
+        <div className="size-9 rounded-lg bg-zinc-900 text-white flex items-center justify-center shrink-0">
+          <Bell className="size-4 text-[#E1FF01]" />
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-indigo-950">
-            Receba aviso imediato quando seu pacote chegar
+          <h4 className="text-xs sm:text-sm font-bold text-zinc-950">
+            Receba o Passe Digital no Celular
           </h4>
-          <p className="text-xs text-indigo-700">
-            Ative o Web Push no seu navegador e retire com o QR Code mesmo sem abrir o app.
+          <p className="text-xs text-zinc-500">
+            Ative o Web Push para ser avisado no exato instante em que o entregador chegar na portaria.
           </p>
         </div>
       </div>
+
       <Button
         onClick={handleSubscribe}
         disabled={isLoading}
         size="sm"
-        className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shrink-0 self-end sm:self-center"
+        className="rounded-lg bg-zinc-900 hover:bg-black text-white font-semibold text-xs h-8 px-4 shrink-0 self-end sm:self-center shadow-xs"
       >
-        {isLoading ? "Ativando..." : "Ativar Notificações"}
+        {isLoading ? "Ativando..." : "Ativar Avisos"}
       </Button>
     </div>
   )
 }
-

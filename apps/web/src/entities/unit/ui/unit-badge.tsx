@@ -1,5 +1,4 @@
 import React from "react"
-import { Badge } from "@/shared/ui/badge"
 import { Building2 } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 
@@ -11,18 +10,16 @@ interface UnitBadgeProps {
 
 export function UnitBadge({ block, number, className }: UnitBadgeProps) {
   return (
-    <Badge
-      variant="secondary"
+    <span
       className={cn(
-        "inline-flex items-center gap-1.5 font-semibold text-xs px-2.5 py-0.5 border border-slate-200 bg-slate-100 text-slate-800",
+        "inline-flex items-center gap-1 font-bold text-[11px] px-2.5 py-0.5 rounded-lg bg-zinc-100 text-zinc-800 border border-zinc-200/90 shadow-2xs select-none",
         className
       )}
     >
-      <Building2 className="size-3 text-slate-500" />
+      <Building2 className="size-3 text-zinc-500" />
       <span>
-        Bloco {block} &bull; Apto {number}
+        {block ? `Bl. ${block} • ` : ""}Apto {number}
       </span>
-    </Badge>
+    </span>
   )
 }
-

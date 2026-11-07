@@ -5,6 +5,7 @@ export const ResidentSchema = z.object({
   unitId: z.string().uuid(),
   fullName: z.string().min(2, "Nome completo obrigatório"),
   email: z.string().email("E-mail inválido"),
+  phone: z.string().optional(),
   documentLast4: z.string().length(4, "Informe os 4 últimos dígitos do documento"),
   isPrimary: z.boolean().default(false),
   createdAt: z.string().datetime().optional(),

@@ -1,6 +1,55 @@
 import { Unit } from "@/entities/unit/model/types"
 import { Resident } from "@/entities/resident/model/types"
 import { PackageItem, PackageEvent } from "@/entities/package/model/types"
+import { UserSession } from "@/shared/ports/IAuthGateway"
+
+export interface DemoUserConfig {
+  session: UserSession
+  password: "123456"
+  defaultRoute: "/portaria" | "/morador" | "/admin"
+}
+
+export const DEMO_USERS: Record<string, DemoUserConfig> = {
+  porteiro: {
+    session: {
+      id: "u-porter-carlos",
+      name: "Carlos Silva",
+      email: "porteiro@chegou.ai",
+      role: "PORTER",
+      token: "mock-jwt-porter-carlos",
+    },
+    password: "123456",
+    defaultRoute: "/portaria",
+  },
+  morador: {
+    session: {
+      id: "u-resident-mariana",
+      name: "Mariana Costa",
+      email: "mariana@chegou.ai",
+      role: "RESIDENT",
+      residentId: "3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f",
+      unit: {
+        unitId: "8f14e45f-ea9a-4c31-9b2a-112233445566",
+        block: "B",
+        number: "402",
+      },
+      token: "mock-jwt-resident-mariana",
+    },
+    password: "123456",
+    defaultRoute: "/morador",
+  },
+  sindico: {
+    session: {
+      id: "u-admin-roberto",
+      name: "Roberto Almeida",
+      email: "sindico@chegou.ai",
+      role: "ADMIN",
+      token: "mock-jwt-admin-roberto",
+    },
+    password: "123456",
+    defaultRoute: "/admin",
+  },
+}
 
 export const MOCK_UNITS: Unit[] = [
   { id: "8f14e45f-ea9a-4c31-9b2a-112233445566", block: "B", number: "402", isActive: true },
@@ -17,6 +66,7 @@ export const MOCK_RESIDENTS: Resident[] = [
     unitId: "8f14e45f-ea9a-4c31-9b2a-112233445566", // B - 402
     fullName: "Mariana Costa Silva",
     email: "mariana.silva@email.com",
+    phone: "(11) 98765-4321",
     documentLast4: "4921",
     isPrimary: true,
   },
@@ -25,6 +75,7 @@ export const MOCK_RESIDENTS: Resident[] = [
     unitId: "1a2b3c4d-5e6f-7a8b-9c0d-111122223333", // A - 101
     fullName: "Carlos Eduardo Menezes",
     email: "carlos.menezes@email.com",
+    phone: "(11) 99123-8877",
     documentLast4: "1839",
     isPrimary: true,
   },
@@ -33,6 +84,7 @@ export const MOCK_RESIDENTS: Resident[] = [
     unitId: "2b3c4d5e-6f7a-8b9c-0d1e-222233334444", // A - 102
     fullName: "Roberto Sindico Santos",
     email: "roberto.sindico@email.com",
+    phone: "(11) 97444-1029",
     documentLast4: "7720",
     isPrimary: true,
   },

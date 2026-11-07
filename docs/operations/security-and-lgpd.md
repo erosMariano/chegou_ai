@@ -31,7 +31,7 @@ Cada perfil acessa estritamente os recursos necessários para sua função opera
 
 ## 3. Privacidade by Design & Conformidade LGPD
 
-* **Minimização de Dados:** O sistema coleta apenas o estritamente necessário para a entrega física (Nome, Unidade, E-mail e os 4 últimos dígitos do documento para desempate de homônimos). Não há coleta de CPF completo, RG ou biometria facial.
+* **Minimização de Dados:** O sistema coleta apenas o estritamente necessário para a entrega física e contato operacional (Nome, Unidade, E-mail, Telefone/WhatsApp e os 4 últimos dígitos do documento para desempate de homônimos). Não há coleta de CPF completo, RG ou biometria facial.
 * **Descarte Imediato de Imagens:** As fotos das etiquetas capturadas na portaria trafegam exclusivamente em memória RAM (`Buffer`) durante a requisição ao provedor de IA e são descartadas imediatamente após a extração do JSON — nenhuma foto de pacote ou endereço é armazenada em disco ou object storage (S3).
-* **Mascaramento de Dados na Portaria:** Na tela de consulta do porteiro, informações de contato dos moradores (como e-mail) são mascaradas (ex.: `ma****@gmail.com`), impedindo coleta indevida de dados pessoais.
+* **Mascaramento de Dados na Portaria:** Na tela de consulta do porteiro, informações de contato dos moradores (como e-mail e telefone) são mascaradas (ex.: `ma****@gmail.com` e `(11) 9****-4321`), impedindo coleta indevida de dados pessoais conforme ADR-006.
 * **Web Push Criptografado (VAPID):** Todo payload enviado aos navegadores/dispositivos utiliza criptografia ponta a ponta definida pela especificação Web Push (chaves `p256dh` e `auth`), e tokens expirados (`HTTP 410 Gone`) são removidos automaticamente do banco pelo worker.
