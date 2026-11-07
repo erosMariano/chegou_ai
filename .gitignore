@@ -32,6 +32,8 @@ next-env.d.ts
 coverage/
 .nyc_output/
 junit.xml
+.playwright-mcp/
+test-results/
 
 # ==========================================
 # Docker & Volumes Locais
