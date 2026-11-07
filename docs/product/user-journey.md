@@ -26,4 +26,4 @@ sequenceDiagram
     Core->>Queue: Publica evento PackageReceived
     Core-->>App: 201 Created (Sucesso)
     Note over Porteiro,Entregador: Porteiro libera entregador (< 10s)
-    Queue->>Morador: Worker dispara WhatsApp/Push com PIN e Link QR
+    Queue->>Morador: Worker dispara Push Notification com PIN e Link QR

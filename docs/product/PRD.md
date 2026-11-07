@@ -29,7 +29,7 @@ O **`CHEGOU.AI`** automatiza o check-in de encomendas via **Visão Computacional
 | Persona | Contexto de Uso | Job to be Done (JTBD) |
 | :--- | :--- | :--- |
 | **Carlos (Porteiro / Zelador)** | Opera em pé, sob pressão, usando tablet ou celular da portaria durante entregas em lote. | *"Quando chega uma van com 20 caixas, quero registrar cada pacote apenas apontando a câmera para a etiqueta, para liberar o entregador rápido sem digitar dados."* |
-| **Mariana (Moradora)** | Recebe alertas no celular enquanto trabalha ou está fora de casa. | *"Quando uma encomenda chega para mim, quero ser avisada imediatamente no WhatsApp/Push e ter um código rápido para retirar na portaria sem burocracia."* |
+| **Mariana (Moradora)** | Recebe alertas no celular enquanto trabalha ou está fora de casa. | *"Quando uma encomenda chega para mim, quero ser avisada imediatamente via Push Notification e ter um código rápido para retirar na portaria sem burocracia."* |
 | **Roberto (Síndico / Admin)** | Gerencia a operação do condomínio e resolve disputas de pacotes perdidos. | *"Quando um morador alegar que não recebeu um pacote, quero consultar uma trilha de auditoria imutável mostrando quem recebeu, quando notificou e quem validou a retirada."* |
 
 ---
@@ -40,7 +40,7 @@ O **`CHEGOU.AI`** automatiza o check-in de encomendas via **Visão Computacional
 * **Gestão de Unidades e Moradores:** Cadastro de blocos, apartamentos e moradores vinculados (com canal preferencial de contato).
 * **Smart Check-in com IA:** Captura de foto da etiqueta com extração automática de destinatário, bloco/apartamento, transportadora e código de rastreio (com fallback manual imediato).
 * **Geração de Token de Retirada:** Criação de PIN numérico de 6 dígitos + QR Code único por encomenda/lote.
-* **Notificação Assíncrona:** Envio automático de alerta via fila de mensageria (WhatsApp / E-mail / Push) com política de retentativa.
+* **Notificação Assíncrona:** Envio automático de alerta via fila de mensageria (Push Notification / E-mail) com política de retentativa.
 * **Check-out Validado (Idempotente):** Baixa da encomenda mediante leitura do QR Code ou digitação do PIN, bloqueando baixas duplicadas.
 * **Trilha de Auditoria (Audit Log):** Histórico completo de eventos (`RECEIVED`, `NOTIFIED`, `DELIVERED`, `CANCELLED`).
 
@@ -63,7 +63,7 @@ O **`CHEGOU.AI`** automatiza o check-in de encomendas via **Visão Computacional
 
 ### Requisitos Não-Funcionais
 * **RNF01 (Latência de IA):** A extração de dados da etiqueta via IA deve responder em **menos de 2,5 segundos** (P95).
-* **RNF02 (Resiliência):** Falhas ou lentidão em provedores externos (WhatsApp/Push) não podem bloquear ou causar erro na tela de check-in do porteiro.
+* **RNF02 (Resiliência):** Falhas ou lentidão em provedores externos de Push Notification não podem bloquear ou causar erro na tela de check-in do porteiro.
 * **RNF03 (Consistência & Idempotência):** Operações de entrega devem garantir consistência forte (ACID), impedindo que duas requisições simultâneas deem baixa duplicada no mesmo pacote.
 * **RNF04 (Privacidade / LGPD):** Dados sensíveis (telefone completo, CPF) não devem ser expostos em texto claro na tela pública da portaria.
 
