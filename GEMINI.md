@@ -33,3 +33,4 @@ Siga estritamente a combinação **SDD + Feature-Sliced Design (FSD) + Atomic De
 1. **Segurança:** Nunca expor `GEMINI_API_KEY` ou `VAPID_PRIVATE_KEY` no cliente. Toda chamada de IA passa pelo BFF do Next.js.
 2. **Privacidade (LGPD):** Nunca salvar fotos das etiquetas em disco/storage; processar apenas em memória e descartar. Armazenar apenas o hash criptográfico do PIN (`pickup_pin_hash`).
 3. **Máquina de Estados & Auditoria:** Respeitar estritamente as transições (`RECEIVED` -> `NOTIFIED` -> `DELIVERED` / `CANCELLED`) e registrar toda mudança de estado na tabela append-only `package_events`.
+4. **Política de Commits:** NUNCA realizar commits automaticamente ao finalizar tarefas de código ou validação. O versionamento de código só deve ser feito quando o usuário chamar explicitamente o agente `@[.agents/07-git-commit-engineer.md]`. Este agente então fechará os servidores dev locais e organizará pequenos commits semânticos atômicos (`feat(...)`, `fix(...)`, etc.).
