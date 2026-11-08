@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { PrismaService } from "@/prisma/prisma.service"
+import { AddressMatcherService, AddressValidationResult } from "./address-matcher.service"
 
 export interface ExtractedLabelData {
   recipientName: string | null
@@ -8,6 +9,10 @@ export interface ExtractedLabelData {
   unitNumber: string | null
   trackingCode: string | null
   carrier: string | null
+  extractedStreet?: string | null
+  extractedNumber?: string | null
+  extractedZipCode?: string | null
+  extractedCity?: string | null
   confidenceScore: number
   uncertaintyReason: string | null
 }
@@ -18,6 +23,7 @@ export interface LabelExtractionResult {
   confidenceScore: number
   requiresReview: boolean
   processingTimeMs: number
+  addressValidation: AddressValidationResult
 }
 
 @Injectable()
@@ -26,7 +32,8 @@ export class AiService {
 
   constructor(
     private readonly config: ConfigService,
-    private readonly prisma: PrismaService
+    private readonly prisma: PrismaService,
+    private readonly addressMatcher: AddressMatcherService
   ) {}
 
   async extractLabelFromImage(imageBase64?: string, mimeType = "image/jpeg"): Promise<LabelExtractionResult> {
@@ -70,11 +77,20 @@ export class AiService {
       }
     }
 
+    // Validação de endereço oficial do condomínio (Multi-Address Validation)
+    const addressValidation = await this.addressMatcher.matchAddress({
+      extractedStreet: extracted.extractedStreet,
+      extractedNumber: extracted.extractedNumber,
+      extractedZipCode: extracted.extractedZipCode,
+      extractedCity: extracted.extractedCity,
+    })
+
     const confidenceScore =
       typeof extracted.confidenceScore === "number" && !isNaN(extracted.confidenceScore)
         ? extracted.confidenceScore
         : 0.0
-    const requiresReview = confidenceScore < 0.80 || !matchedUnitId
+    const requiresReview =
+      confidenceScore < 0.80 || !matchedUnitId || addressValidation.isMatch === false
 
     return {
       extracted,
@@ -82,6 +98,7 @@ export class AiService {
       confidenceScore,
       requiresReview,
       processingTimeMs: Date.now() - startTime,
+      addressValidation,
     }
   }
 
@@ -94,13 +111,17 @@ export class AiService {
     const cleanBase64 = base64Image.replace(/^data:[^;]+;base64,/, "")
 
     const prompt = `Você é um especialista em logística condominial e extração de dados de etiquetas de transporte.
-Analise a imagem da etiqueta de encomenda fornecida e extraia exclusivamente os dados do DESTINATÁRIO final (morador), ignorando os dados do remetente/loja.
-Retorne um JSON estrito com os campos:
+Analise a imagem da etiqueta de encomenda fornecida e extraia exclusivamente os dados do DESTINATÁRIO final (morador e endereço de entrega no condomínio), ignorando os dados do remetente/loja.
+Retorne um JSON estrito com os seguintes campos:
 - recipientName (string ou null)
 - unitBlock (string ou null, ex: 'A', 'B')
 - unitNumber (string ou null, ex: '402', '101')
 - trackingCode (string ou null)
 - carrier (string ou null, ex: 'Mercado Livre', 'Amazon', 'Shopee', 'Correios')
+- extractedStreet (string ou null, logradouro do destinatário, ex: 'Avenida das Américas', 'Rua X')
+- extractedNumber (string ou null, número predial do condomínio, ex: '1500')
+- extractedZipCode (string ou null, CEP do destinatário, ex: '22640-101' ou '22640101')
+- extractedCity (string ou null, cidade do destinatário)
 - confidenceScore (número entre 0.0 e 1.0)
 - uncertaintyReason (string ou null se confidenceScore < 0.8)`
 
@@ -157,6 +178,10 @@ Retorne um JSON estrito com os campos:
       unitNumber: "402",
       trackingCode: `BR${Math.floor(100000000 + Math.random() * 900000000)}ML`,
       carrier: "Mercado Livre",
+      extractedStreet: "Avenida das Américas",
+      extractedNumber: "1500",
+      extractedZipCode: "22640101",
+      extractedCity: "Rio de Janeiro",
       confidenceScore: 0.94,
       uncertaintyReason: null,
     }
