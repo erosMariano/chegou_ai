@@ -4,11 +4,14 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from "@nestjs/common"
 import { Request, Response } from "express"
 
 @Catch()
 export class Rfc7807ExceptionFilter implements ExceptionFilter {
+  private readonly logger = new Logger(Rfc7807ExceptionFilter.name)
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp()
     const response = ctx.getResponse<Response>()
@@ -42,7 +45,13 @@ export class Rfc7807ExceptionFilter implements ExceptionFilter {
       else if (status === 401) type = "https://chegou.ai/errors/unauthorized"
       else if (status === 403) type = "https://chegou.ai/errors/forbidden"
     } else if (exception instanceof Error) {
-      detail = exception.message
+      this.logger.error(`Unhandled Exception em ${request.method} ${request.url}: ${exception.message}`, exception.stack)
+      // Em produção, nunca vaza o stack trace ou mensagens internas de drivers de banco
+      if (process.env.NODE_ENV === "production") {
+        detail = "Ocorreu um erro interno inesperado no servidor."
+      } else {
+        detail = exception.message
+      }
     }
 
     response.status(status).json({
