@@ -2,15 +2,9 @@ import { Injectable, NotFoundException, BadRequestException } from "@nestjs/comm
 import { PrismaService } from "@/prisma/prisma.service"
 import { UserRole } from "@prisma/client"
 import * as bcrypt from "bcryptjs"
+import { CreateResidentDto } from "./dto/create-resident.dto"
 
-export interface CreateResidentDto {
-  unitId: string
-  fullName: string
-  email: string
-  phone?: string
-  documentLast4?: string
-  isPrimary?: boolean
-}
+export { CreateResidentDto }
 
 @Injectable()
 export class ResidentsService {

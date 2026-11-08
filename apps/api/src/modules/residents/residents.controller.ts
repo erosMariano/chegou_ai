@@ -6,23 +6,23 @@ import { Roles } from "@/common/decorators/roles.decorator"
 import { UserRole } from "@prisma/client"
 
 @Controller("residents")
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ResidentsController {
   constructor(private readonly residentsService: ResidentsService) {}
 
   @Get()
+  @Roles(UserRole.ADMIN, UserRole.PORTER) // Proteção LGPD: apenas funcionários da portaria e síndico
   async findAll(@Query("unitId") unitId?: string) {
     return this.residentsService.findAll(unitId)
   }
 
   @Get("me/packages")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.RESIDENT, UserRole.ADMIN)
   async getMyPackages(@Request() req: any, @Query("status") status?: string) {
     return this.residentsService.getResidentPackages(req.user.email, status)
   }
 
   @Post("me/push-subscriptions")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.RESIDENT, UserRole.ADMIN, UserRole.PORTER)
   async registerPushSubscription(
     @Request() req: any,
@@ -40,26 +40,24 @@ export class ResidentsController {
   }
 
   @Get(":id")
+  @Roles(UserRole.ADMIN, UserRole.PORTER)
   async findOne(@Param("id") id: string) {
     return this.residentsService.findOne(id)
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   async create(@Body() body: CreateResidentDto) {
     return this.residentsService.create(body)
   }
 
   @Put(":id")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   async update(@Param("id") id: string, @Body() body: Partial<CreateResidentDto>) {
     return this.residentsService.update(id, body)
   }
 
   @Delete(":id")
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   async delete(@Param("id") id: string) {
     return this.residentsService.delete(id)
