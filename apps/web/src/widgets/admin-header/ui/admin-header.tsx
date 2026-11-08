@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ShieldCheck, Building2, Users, FileText, Settings, ArrowLeft } from "lucide-react"
+import { ShieldCheck, Building2, Users, MapPin, FileText, Settings, ArrowLeft } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 
 export function AdminHeader() {
@@ -27,6 +27,12 @@ export function AdminHeader() {
       href: "/admin/moradores",
       icon: Users,
       active: pathname.startsWith("/admin/moradores"),
+    },
+    {
+      label: "Endereços",
+      href: "/admin/enderecos",
+      icon: MapPin,
+      active: pathname.startsWith("/admin/enderecos"),
     },
   ]
 

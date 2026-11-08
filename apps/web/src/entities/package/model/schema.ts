@@ -16,8 +16,20 @@ export const ExtractedLabelSchema = z.object({
   unitNumber: z.string().nullable().optional().default(""),
   trackingCode: z.string().nullable().optional().default(""),
   carrier: z.string().nullable().optional().default(""),
+  extractedStreet: z.string().nullable().optional().default(""),
+  extractedNumber: z.string().nullable().optional().default(""),
+  extractedZipCode: z.string().nullable().optional().default(""),
+  extractedCity: z.string().nullable().optional().default(""),
   uncertaintyReason: z.string().nullable().optional(),
 })
+
+export const AddressValidationSchema = z.object({
+  isMatch: z.boolean().nullable(),
+  matchedAddressLabel: z.string().optional(),
+  mismatchReason: z.string().optional(),
+})
+
+export type AddressValidation = z.infer<typeof AddressValidationSchema>
 
 export const ExtractLabelResponseSchema = z.object({
   extracted: ExtractedLabelSchema,
@@ -25,6 +37,7 @@ export const ExtractLabelResponseSchema = z.object({
   confidenceScore: z.number().min(0).max(1),
   requiresReview: z.boolean(),
   processingTimeMs: z.number(),
+  addressValidation: AddressValidationSchema.optional(),
 })
 
 export type ExtractLabelResponse = z.infer<typeof ExtractLabelResponseSchema>

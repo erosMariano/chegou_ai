@@ -1,6 +1,7 @@
 export type {
   PackageStatus,
   ExtractLabelResponse,
+  AddressValidation,
   CheckinFormData,
   CheckoutFormData,
   PackageEvent,

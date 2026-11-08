@@ -134,6 +134,29 @@ export async function httpPut<T>(endpoint: string, body?: unknown): Promise<T> {
   }
 }
 
+export async function httpPatch<T>(endpoint: string, body?: unknown): Promise<T> {
+  const baseUrl = getApiBaseUrl()
+  const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
+
+  try {
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: getDefaultHeaders(),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.detail || err.message || `Erro ${res.status} ao atualizar ${endpoint}`)
+    }
+
+    return await res.json()
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Falha ao conectar com o backend"
+    throw new Error(msg)
+  }
+}
+
 export async function httpDelete(endpoint: string): Promise<void> {
   const baseUrl = getApiBaseUrl()
   const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`

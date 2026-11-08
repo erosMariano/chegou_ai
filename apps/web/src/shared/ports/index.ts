@@ -1,9 +1,11 @@
 import { PackagePort } from "./package-port"
 import { UnitPort } from "./unit-port"
 import { IAuthGateway } from "./IAuthGateway"
+import { CondominiumPort } from "./condominium-port"
 import { HttpPackageAdapter } from "@/shared/adapters/http/http-package-adapter"
 import { HttpUnitAdapter } from "@/shared/adapters/http/http-unit-adapter"
 import { HttpAuthAdapter } from "@/shared/adapters/http/http-auth-adapter"
+import { HttpCondominiumAdapter } from "@/shared/adapters/http/http-condominium-adapter"
 import { mockPackageAdapter } from "@/shared/adapters/mock/mock-package-adapter"
 import { mockUnitAdapter } from "@/shared/adapters/mock/mock-unit-adapter"
 import { localStorageAuthAdapter } from "@/shared/adapters/mock/local-storage-auth-adapter"
@@ -29,6 +31,9 @@ export const authGateway: IAuthGateway = useMocks
   ? localStorageAuthAdapter
   : new HttpAuthAdapter()
 
+export const condominiumPort: CondominiumPort = new HttpCondominiumAdapter()
+
 export * from "./package-port"
 export * from "./unit-port"
 export * from "./IAuthGateway"
+export * from "./condominium-port"

@@ -148,11 +148,20 @@ class MockPackageAdapterImpl implements PackagePort {
         unitNumber: mockUnit.number,
         trackingCode: "BR26984120984ML",
         carrier: "Mercado Livre",
+        extractedStreet: "Avenida das Américas",
+        extractedNumber: "1500",
+        extractedZipCode: "22640101",
+        extractedCity: "Rio de Janeiro",
+        uncertaintyReason: null,
       },
       matchedUnitId: mockUnit.id,
       confidenceScore: 0.95,
       requiresReview: false,
       processingTimeMs: 1120,
+      addressValidation: {
+        isMatch: true,
+        matchedAddressLabel: "Portaria Principal",
+      },
     }
   }
 

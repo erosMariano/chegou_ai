@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { CheckinFormSchema, CheckinFormData } from "@/entities/package/model/schema"
 import { packagePort, unitPort } from "@/shared/ports"
 import { Unit } from "@/entities/unit/model/types"
+import { AddressValidation } from "@/entities/package/model/types"
 import { ScannerHero } from "./scanner-hero"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
@@ -32,6 +33,7 @@ export function ScanForm({ units }: ScanFormProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [aiScore, setAiScore] = useState<number | null>(null)
+  const [addressValidation, setAddressValidation] = useState<AddressValidation | null>(null)
   const [activeStep, setActiveStep] = useState<1 | 2>(1)
 
   useEffect(() => {
@@ -90,6 +92,10 @@ export function ScanForm({ units }: ScanFormProps) {
 
       setValue("aiConfidenceScore", res.confidenceScore)
       setAiScore(res.confidenceScore)
+
+      if (res.addressValidation) {
+        setAddressValidation(res.addressValidation)
+      }
 
       if (res.matchedUnitId) {
         setValue("unitId", res.matchedUnitId, { shouldValidate: true })
@@ -154,6 +160,7 @@ export function ScanForm({ units }: ScanFormProps) {
       })
       setPreviewUrl(null)
       setAiScore(null)
+      setAddressValidation(null)
       setActiveStep(1)
 
       router.push("/portaria")
@@ -240,6 +247,59 @@ export function ScanForm({ units }: ScanFormProps) {
             </div>
           )}
         </div>
+
+        {/* Address Validation Feedback */}
+        {addressValidation && (
+          <div className="pt-1">
+            {addressValidation.isMatch === true && (
+              <div className="rounded-lg bg-emerald-50/90 border border-emerald-200/90 p-3.5 flex items-start gap-3 text-xs text-emerald-950 animate-in fade-in">
+                <div className="size-7 rounded-md bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                  <ShieldCheck className="size-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="font-bold text-emerald-900 flex items-center gap-1.5">
+                    Endereço Oficial Validado
+                    <span className="text-[10px] bg-emerald-200/80 text-emerald-800 px-1.5 py-0.5 rounded font-semibold">
+                      {addressValidation.matchedAddressLabel || "Portaria Principal"}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-emerald-700">
+                    A IA confirmou que a etiqueta corresponde a um dos endereços oficiais cadastrados deste condomínio.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {addressValidation.isMatch === false && (
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3.5 flex items-start gap-3 text-xs text-red-950 animate-in fade-in">
+                <div className="size-7 rounded-md bg-red-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                  <AlertCircle className="size-4" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-red-950 uppercase tracking-wide text-[10px] bg-red-200/90 text-red-900 px-2 py-0.5 rounded">
+                      Alerta de Divergência
+                    </span>
+                    <p className="font-bold text-red-900">Endereço Não Pertence a Este Condomínio!</p>
+                  </div>
+                  <p className="text-[11px] text-red-800 leading-relaxed">
+                    {addressValidation.mismatchReason || "Os dados da etiqueta indicam outro logradouro/número."}
+                  </p>
+                  <p className="text-[10px] font-semibold text-red-600">
+                    Por favor, confira com o entregador antes de confirmar o recebimento do pacote.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {addressValidation.isMatch === null && (
+              <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-2.5 flex items-center gap-2 text-xs text-zinc-600">
+                <Building2 className="size-3.5 text-zinc-400 shrink-0" />
+                <span>Logradouro não identificado com clareza na etiqueta.</span>
+              </div>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* Destinatário */}
