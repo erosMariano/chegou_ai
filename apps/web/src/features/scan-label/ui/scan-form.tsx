@@ -124,7 +124,7 @@ export function ScanForm({ units }: ScanFormProps) {
       const created = await packagePort.checkinPackage(data, idempotencyKey)
 
       toast.success("Check-in concluído e Web Push despachado!", {
-        description: `PIN gerado: ${created.pickupPin} para ${created.recipientNameRaw} (${created.unit?.block}-${created.unit?.number})`,
+        description: `Notificação enviada para ${created.recipientNameRaw} (${created.unit?.block}-${created.unit?.number})`,
       })
 
       router.push("/portaria")

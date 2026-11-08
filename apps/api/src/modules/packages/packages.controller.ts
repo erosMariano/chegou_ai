@@ -58,12 +58,14 @@ export class PackagesController {
       effectiveUnitId = req.user.unitId
     }
 
+    const isResident = req.user?.role === UserRole.RESIDENT
     const res = await this.packagesService.findAll({
       status,
       unitId: effectiveUnitId,
       search,
       page,
       limit,
+      isResident,
     })
 
     if (!page) {
@@ -75,8 +77,9 @@ export class PackagesController {
   @Get(":id")
   @Roles(UserRole.PORTER, UserRole.ADMIN, UserRole.RESIDENT)
   async getOne(@Param("id") id: string, @Request() req: any) {
-    const pkg = await this.packagesService.getOne(id)
-    if (req.user?.role === UserRole.RESIDENT && pkg.unitId !== req.user.unitId) {
+    const isResident = req.user?.role === UserRole.RESIDENT
+    const pkg = await this.packagesService.getOne(id, isResident)
+    if (isResident && pkg.unitId !== req.user.unitId) {
       throw new ForbiddenException("Você não possui permissão para visualizar encomendas de outra unidade.")
     }
     return pkg
