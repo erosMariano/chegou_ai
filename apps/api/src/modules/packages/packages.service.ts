@@ -117,7 +117,6 @@ export class PackagesService {
       recipientNameRaw: pkg.recipientNameRaw,
       carrier: pkg.carrier,
       trackingCode: pkg.trackingCode,
-      pickupPin: rawPin,
       pickupQrToken: pkg.pickupQrToken,
       receivedAt: pkg.receivedAt.toISOString(),
       aiConfidenceScore: pkg.aiConfidenceScore ? Number(pkg.aiConfidenceScore) : null,
@@ -156,19 +155,37 @@ export class PackagesService {
         include: { unit: true },
       })
     } else {
-      // Busca encomendas pendentes de retirada
-      const pendingPackages = await this.prisma.package.findMany({
-        where: {
+      // Otimização e Prevenção contra DoS de CPU (Bcrypt Loop):
+      // Se packageId for informado, lookup direto O(1) com apenas 1 verificação de hash
+      if (dto.packageId) {
+        const pkg = await this.prisma.package.findUnique({
+          where: { id: dto.packageId },
+          include: { unit: true },
+        })
+        if (pkg && (await bcrypt.compare(rawCode, pkg.pickupPinHash))) {
+          targetPackage = pkg
+        }
+      } else {
+        const whereClause: any = {
           status: { in: [PackageStatus.RECEIVED, PackageStatus.NOTIFIED, PackageStatus.NOTIFICATION_FAILED] },
-        },
-        include: { unit: true },
-      })
+        }
+        if (dto.unitId) {
+          whereClause.unitId = dto.unitId
+        }
 
-      for (const p of pendingPackages) {
-        const matches = await bcrypt.compare(rawCode, p.pickupPinHash)
-        if (matches) {
-          targetPackage = p
-          break
+        // take: 20 limita o pior caso de hashes comparados em uma única chamada
+        const pendingPackages = await this.prisma.package.findMany({
+          where: whereClause,
+          take: 20,
+          include: { unit: true },
+        })
+
+        for (const p of pendingPackages) {
+          const matches = await bcrypt.compare(rawCode, p.pickupPinHash)
+          if (matches) {
+            targetPackage = p
+            break
+          }
         }
       }
     }
@@ -271,6 +288,7 @@ export class PackagesService {
     search?: string
     page?: number
     limit?: number
+    isResident?: boolean
   }) {
     const page = Math.max(Number(params.page) || 1, 1)
     const limit = Math.min(Math.max(Number(params.limit) || 20, 1), 100)
@@ -322,7 +340,8 @@ export class PackagesService {
         trackingCode: pkg.trackingCode,
         carrier: pkg.carrier,
         status: pkg.status,
-        pickupPin: pkg.pickupPin,
+        // Oculta PIN para operadores/porteiros; visível apenas para o morador autenticado
+        pickupPin: params.isResident ? pkg.pickupPin : undefined,
         aiConfidenceScore: pkg.aiConfidenceScore ? Number(pkg.aiConfidenceScore) : null,
         version: pkg.version,
         pickupQrToken: pkg.pickupQrToken,
@@ -342,7 +361,7 @@ export class PackagesService {
     }
   }
 
-  async getOne(id: string) {
+  async getOne(id: string, isResident = false) {
     const pkg = await this.prisma.package.findUnique({
       where: { id },
       include: {
@@ -357,6 +376,12 @@ export class PackagesService {
       throw new NotFoundException(`Encomenda ${id} não encontrada.`)
     }
 
-    return pkg
+    // Sanitização de segurança: nunca expõe pickupPinHash na API; oculta pickupPin de operadores
+    const { pickupPinHash, pickupPin, ...safePkg } = pkg
+
+    return {
+      ...safePkg,
+      pickupPin: isResident ? pickupPin : undefined,
+    }
   }
 }

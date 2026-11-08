@@ -41,6 +41,10 @@ export class CheckoutPackageDto {
   codeType: "PIN" | "QR"
 
   @IsOptional()
+  @IsUUID("4", { message: "ID da encomenda deve ser um UUID válido" })
+  packageId?: string
+
+  @IsOptional()
   @IsUUID("4", { message: "ID do morador deve ser um UUID válido" })
   residentId?: string
 
