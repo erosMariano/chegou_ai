@@ -48,6 +48,7 @@ export function PinCheckoutForm() {
 
       if (res.success && res.packageItem) {
         setDeliveredPackage(res.packageItem)
+        setPin("") // Limpa o PIN digitado após confirmação com sucesso
         if (typeof navigator !== "undefined" && navigator.vibrate) {
           navigator.vibrate([100, 50, 100])
         }
@@ -56,6 +57,7 @@ export function PinCheckoutForm() {
         })
       } else {
         const msg = res.message || "Código PIN inválido ou encomenda já baixada"
+        setPin("") // Limpa o PIN inválido para nova tentativa limpa
         setErrorMessage(msg)
         toast.error(msg)
       }

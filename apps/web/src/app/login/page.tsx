@@ -43,6 +43,10 @@ export default function LoginPage() {
       const session = await login({ email, password })
       toast.success(`Bem-vindo, ${session.name}!`)
 
+      // Limpa os campos do formulário após login bem-sucedido
+      setEmail("")
+      setPassword("")
+
       if (session.role === "PORTER") router.push("/portaria")
       else if (session.role === "RESIDENT") router.push("/morador")
       else if (session.role === "ADMIN") router.push("/admin")
@@ -61,6 +65,10 @@ export default function LoginPage() {
       setErrorMsg(null)
       const session = await loginAsDemo(role)
       toast.success(`Entrando como ${session.name}...`)
+
+      // Limpa os campos do formulário
+      setEmail("")
+      setPassword("")
 
       if (session.role === "PORTER") router.push("/portaria")
       else if (session.role === "RESIDENT") router.push("/morador")
