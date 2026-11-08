@@ -95,6 +95,7 @@ model Package {
   recipientNameRaw      String        @map("recipient_name_raw") @db.VarChar(150)
   trackingCode          String?       @map("tracking_code") @db.VarChar(100)
   carrier               String?       @db.VarChar(80)
+  pickupPin             String?       @map("pickup_pin") @db.VarChar(10)
   pickupPinHash         String        @map("pickup_pin_hash") @db.VarChar(255)
   pickupQrToken         String        @unique @default(uuid()) @map("pickup_qr_token") @db.Uuid
   status                PackageStatus @default(RECEIVED)
