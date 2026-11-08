@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from "@nestjs/common"
+import { Controller, Get, Post, Put, Body, Param, UseGuards, Request, ParseUUIDPipe } from "@nestjs/common"
 import { UnitsService } from "./units.service"
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard"
 import { RolesGuard } from "@/common/guards/roles.guard"
@@ -21,7 +21,7 @@ export class UnitsController {
 
   @Get(":id")
   @Roles(UserRole.ADMIN, UserRole.PORTER, UserRole.RESIDENT)
-  async findOne(@Param("id") id: string, @Request() req: any) {
+  async findOne(@Param("id", new ParseUUIDPipe()) id: string, @Request() req: any) {
     // Morador só pode ver dados de moradores se a unidade consultada for a sua própria
     const isOwnUnit = req.user?.role === UserRole.RESIDENT && req.user?.unitId === id
     const canViewResidents = req.user?.role === UserRole.ADMIN || req.user?.role === UserRole.PORTER || isOwnUnit
@@ -36,7 +36,7 @@ export class UnitsController {
 
   @Put(":id")
   @Roles(UserRole.ADMIN)
-  async update(@Param("id") id: string, @Body() body: UpdateUnitDto) {
+  async update(@Param("id", new ParseUUIDPipe()) id: string, @Body() body: UpdateUnitDto) {
     return this.unitsService.update(id, body)
   }
 }

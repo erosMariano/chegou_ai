@@ -9,6 +9,7 @@ import {
   UseGuards,
   Request,
   ForbiddenException,
+  ParseUUIDPipe,
 } from "@nestjs/common"
 import { PackagesService, CreatePackageDto, CheckoutPackageDto } from "./packages.service"
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard"
@@ -76,7 +77,7 @@ export class PackagesController {
 
   @Get(":id")
   @Roles(UserRole.PORTER, UserRole.ADMIN, UserRole.RESIDENT)
-  async getOne(@Param("id") id: string, @Request() req: any) {
+  async getOne(@Param("id", new ParseUUIDPipe()) id: string, @Request() req: any) {
     const isResident = req.user?.role === UserRole.RESIDENT
     const pkg = await this.packagesService.getOne(id, isResident)
     if (isResident && pkg.unitId !== req.user.unitId) {
