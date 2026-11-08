@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, UseGuards, Request } from "@nestjs/common"
+import { Controller, Post, Body, Get, Param, UseGuards, Request, ForbiddenException } from "@nestjs/common"
 import { AuthService } from "./auth.service"
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard"
 import { Throttle } from "@nestjs/throttler"
@@ -17,6 +17,9 @@ export class AuthController {
   @Post("demo/:role")
   @Throttle({ default: { limit: 15, ttl: 60000 } })
   async loginDemo(@Param("role") role: string) {
+    if (process.env.NODE_ENV === "production") {
+      throw new ForbiddenException("Login de demonstração indisponível em ambiente de produção.")
+    }
     return this.authService.loginDemo(role)
   }
 
