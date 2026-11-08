@@ -12,7 +12,15 @@ export function getApiBaseUrl(): string {
       "http://localhost:8080/api/v1"
     )
   }
-  // Execução Client-Side (Browser)
+  // Execução Client-Side (Browser / Celular na rede local)
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname &&
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1"
+  ) {
+    return `http://${window.location.hostname}:8080/api/v1`
+  }
   return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
 }
 
