@@ -54,15 +54,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout(): Promise<void> {
-    await authGateway.logout()
-    setUser(null)
-    router.push("/login")
+    try {
+      await authGateway.logout()
+    } finally {
+      setUser(null)
+      if (typeof window !== "undefined") {
+        window.location.href = "/login"
+      } else {
+        router.push("/login")
+      }
+    }
   }
 
   async function resetDemoData(): Promise<void> {
-    await authGateway.resetDemoData()
-    setUser(null)
-    router.push("/login")
+    try {
+      await authGateway.resetDemoData()
+    } finally {
+      setUser(null)
+      if (typeof window !== "undefined") {
+        window.location.href = "/login"
+      } else {
+        router.push("/login")
+      }
+    }
   }
 
   return (

@@ -16,6 +16,11 @@ export class AuthController {
     return this.authService.loginDemo(role)
   }
 
+  @Post("logout")
+  async logout() {
+    return { success: true, message: "Sessão encerrada com sucesso." }
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get("me")
   async getMe(@Request() req: any) {

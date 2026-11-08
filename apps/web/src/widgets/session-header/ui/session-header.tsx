@@ -67,7 +67,15 @@ export function SessionHeader() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => logout()}
+            onClick={async () => {
+              try {
+                await logout()
+              } finally {
+                if (typeof window !== "undefined") {
+                  window.location.href = "/login"
+                }
+              }
+            }}
             className="h-8 px-2.5 text-xs text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Sair do sistema"
           >

@@ -70,6 +70,7 @@ export class HttpAuthAdapter implements IAuthGateway {
       this.currentSession = null
       if (typeof window !== "undefined") {
         localStorage.removeItem(STORAGE_KEY)
+        localStorage.removeItem("chegou_ai_auth_session")
       }
       this.notify()
     }
