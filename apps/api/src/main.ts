@@ -2,13 +2,22 @@ import { NestFactory } from "@nestjs/core"
 import { ValidationPipe, Logger } from "@nestjs/common"
 import { AppModule } from "./app.module"
 import { Rfc7807ExceptionFilter } from "./common/filters/rfc7807-exception.filter"
+import helmet from "helmet"
 import * as express from "express"
 
 async function bootstrap() {
   const logger = new Logger("Bootstrap")
   const app = await NestFactory.create(AppModule)
 
-  // Aumentar o limite para payload de imagens Base64 (max 10MB)
+  // Hardening de Cabeçalhos HTTP (CSP, HSTS, X-Frame-Options, X-Content-Type-Options)
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // Desativa CSP no backend de API JSON para evitar conflito com BFF Next.js
+      crossOriginEmbedderPolicy: false,
+    })
+  )
+
+  // Limite para payload de requisições (10MB para upload de imagem Base64 na portaria)
   app.use(express.json({ limit: "10mb" }))
   app.use(express.urlencoded({ limit: "10mb", extended: true }))
 
@@ -36,7 +45,7 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       transform: true,
-      forbidNonWhitelisted: false,
+      forbidNonWhitelisted: true,
     })
   )
 

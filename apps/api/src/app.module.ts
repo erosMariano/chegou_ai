@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common"
 import { ConfigModule } from "@nestjs/config"
+import { APP_GUARD } from "@nestjs/core"
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler"
 import { PrismaModule } from "./prisma/prisma.module"
 import { RedisModule } from "./common/redis/redis.module"
 import { NotificationsModule } from "./modules/notifications/notifications.module"
@@ -16,6 +18,13 @@ import { AuditModule } from "./modules/audit/audit.module"
       isGlobal: true,
       envFilePath: [".env", "../../.env"],
     }),
+    ThrottlerModule.forRoot([
+      {
+        name: "default",
+        ttl: 60000,
+        limit: 120, // Proteção global DoS: 120 req/min por IP
+      },
+    ]),
     PrismaModule,
     RedisModule,
     NotificationsModule,
@@ -26,6 +35,11 @@ import { AuditModule } from "./modules/audit/audit.module"
     AiModule,
     AuditModule,
   ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
-
