@@ -1,0 +1,131 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  ADMIN
+  PORTER
+  RESIDENT
+}
+
+enum PackageStatus {
+  RECEIVED
+  NOTIFIED
+  NOTIFICATION_FAILED
+  DELIVERED
+  CANCELLED
+}
+
+model Unit {
+  id        String     @id @default(uuid()) @db.Uuid
+  block     String     @default("UNICO") @db.VarChar(20)
+  number    String     @db.VarChar(20)
+  isActive  Boolean    @default(true) @map("is_active")
+  createdAt DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  residents Resident[]
+  packages  Package[]
+
+  @@unique([block, number], map: "uq_unit_block_number")
+  @@map("units")
+}
+
+model Resident {
+  id            String    @id @default(uuid()) @db.Uuid
+  unitId        String    @map("unit_id") @db.Uuid
+  fullName      String    @map("full_name") @db.VarChar(150)
+  email         String    @db.VarChar(150)
+  phone         String?   @db.VarChar(20) // ADR-006 Celular/WhatsApp
+  documentLast4 String?   @map("document_last4") @db.VarChar(4)
+  isPrimary     Boolean   @default(false) @map("is_primary")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  unit              Unit               @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  pushSubscriptions PushSubscription[]
+  packagesDelivered Package[]          @relation("DeliveredPackages")
+
+  @@index([unitId], map: "idx_residents_unit_id")
+  @@index([email], map: "idx_residents_email")
+  @@map("residents")
+}
+
+model PushSubscription {
+  id         String    @id @default(uuid()) @db.Uuid
+  residentId String    @map("resident_id") @db.Uuid
+  endpoint   String    @unique @db.Text
+  p256dhKey  String    @map("p256dh_key") @db.Text
+  authKey    String    @map("auth_key") @db.Text
+  userAgent  String?   @map("user_agent") @db.VarChar(255)
+  isValid    Boolean   @default(true) @map("is_valid")
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  resident Resident @relation(fields: [residentId], references: [id], onDelete: Cascade)
+
+  @@index([residentId, isValid], map: "idx_push_subs_resident_valid")
+  @@map("push_subscriptions")
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @db.VarChar(150)
+  email        String    @unique @db.VarChar(150)
+  passwordHash String    @map("password_hash") @db.Text
+  role         UserRole  @default(PORTER)
+  unitId       String?   @map("unit_id") @db.Uuid
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  registeredPackages Package[]      @relation("RegisteredByUser")
+  packageEvents      PackageEvent[]
+
+  @@map("users")
+}
+
+model Package {
+  id                    String        @id @default(uuid()) @db.Uuid
+  unitId                String        @map("unit_id") @db.Uuid
+  registeredByUserId    String        @map("registered_by_user_id") @db.Uuid
+  deliveredToResidentId String?       @map("delivered_to_resident_id") @db.Uuid
+  recipientNameRaw      String        @map("recipient_name_raw") @db.VarChar(150)
+  trackingCode          String?       @map("tracking_code") @db.VarChar(100)
+  carrier               String?       @db.VarChar(80)
+  pickupPinHash         String        @map("pickup_pin_hash") @db.VarChar(255)
+  pickupQrToken         String        @unique @default(uuid()) @map("pickup_qr_token") @db.Uuid
+  status                PackageStatus @default(RECEIVED)
+  aiConfidenceScore     Decimal?      @map("ai_confidence_score") @db.Decimal(3, 2)
+  version               Int           @default(1)
+  receivedAt            DateTime      @default(now()) @map("received_at") @db.Timestamptz(6)
+  notifiedAt            DateTime?     @map("notified_at") @db.Timestamptz(6)
+  deliveredAt           DateTime?     @map("delivered_at") @db.Timestamptz(6)
+
+  unit                Unit           @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  registeredByUser    User           @relation("RegisteredByUser", fields: [registeredByUserId], references: [id])
+  deliveredToResident Resident?      @relation("DeliveredPackages", fields: [deliveredToResidentId], references: [id])
+  events              PackageEvent[]
+
+  @@index([unitId, status], map: "idx_packages_unit_status")
+  @@index([trackingCode], map: "idx_packages_tracking_code")
+  @@map("packages")
+}
+
+model PackageEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  packageId   String   @map("package_id") @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  eventType   String   @map("event_type") @db.VarChar(50)
+  metadata    Json     @default("{}") @db.JsonB
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  package   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  actorUser User?   @relation(fields: [actorUserId], references: [id])
+
+  @@index([packageId, createdAt], map: "idx_package_events_package_id")
+  @@map("package_events")
+}
+
