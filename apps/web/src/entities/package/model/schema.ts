@@ -11,11 +11,12 @@ export const PackageStatusEnum = z.enum([
 export type PackageStatus = z.infer<typeof PackageStatusEnum>
 
 export const ExtractedLabelSchema = z.object({
-  recipientName: z.string().min(1, "Nome do destinatário"),
-  unitBlock: z.string().min(1, "Bloco"),
-  unitNumber: z.string().min(1, "Número do apto"),
-  trackingCode: z.string().optional().default(""),
-  carrier: z.string().optional().default(""),
+  recipientName: z.string().nullable().optional().default(""),
+  unitBlock: z.string().nullable().optional().default(""),
+  unitNumber: z.string().nullable().optional().default(""),
+  trackingCode: z.string().nullable().optional().default(""),
+  carrier: z.string().nullable().optional().default(""),
+  uncertaintyReason: z.string().nullable().optional(),
 })
 
 export const ExtractLabelResponseSchema = z.object({

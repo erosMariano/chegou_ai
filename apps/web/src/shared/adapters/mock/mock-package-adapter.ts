@@ -136,7 +136,7 @@ class MockPackageAdapterImpl implements PackagePort {
     }
   }
 
-  async extractLabel(_imageName?: string): Promise<ExtractLabelResponse> {
+  async extractLabel(_image?: string, _mimeType?: string): Promise<ExtractLabelResponse> {
     // Simula tempo de resposta de IA Gemini 2.5 Flash (~1.2s)
     await new Promise((resolve) => setTimeout(resolve, 800))
 

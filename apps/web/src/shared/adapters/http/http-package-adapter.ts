@@ -49,8 +49,8 @@ export class HttpPackageAdapter implements PackagePort {
     )
   }
 
-  async extractLabel(imageName?: string): Promise<ExtractLabelResponse> {
-    return httpPost<ExtractLabelResponse>("/bff/packages/extract-label", { imageName })
+  async extractLabel(image?: string, mimeType?: string): Promise<ExtractLabelResponse> {
+    return httpPost<ExtractLabelResponse>("/bff/packages/extract-label", { image, mimeType })
   }
 
   async listEvents(): Promise<PackageEvent[]> {

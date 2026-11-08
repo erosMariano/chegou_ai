@@ -29,13 +29,13 @@ export class AiService {
     private readonly prisma: PrismaService
   ) {}
 
-  async extractLabelFromImage(imageBase64: string, mimeType = "image/jpeg"): Promise<LabelExtractionResult> {
+  async extractLabelFromImage(imageBase64?: string, mimeType = "image/jpeg"): Promise<LabelExtractionResult> {
     const startTime = Date.now()
     const apiKey = this.config.get<string>("GEMINI_API_KEY")
 
     let extracted: ExtractedLabelData
 
-    if (apiKey && apiKey.trim() !== "") {
+    if (apiKey && apiKey.trim() !== "" && imageBase64 && imageBase64.trim() !== "") {
       try {
         extracted = await this.callGeminiVision(imageBase64, mimeType, apiKey)
       } catch (err: any) {
@@ -43,7 +43,7 @@ export class AiService {
         extracted = this.fallbackExtraction()
       }
     } else {
-      this.logger.log("GEMINI_API_KEY não configurada. Executando simulação de extração inteligente.")
+      this.logger.log("Imagem vazia ou GEMINI_API_KEY não configurada. Executando simulação de extração inteligente.")
       extracted = this.fallbackExtraction()
     }
 
@@ -70,7 +70,10 @@ export class AiService {
       }
     }
 
-    const confidenceScore = Number(extracted.confidenceScore) || 0.85
+    const confidenceScore =
+      typeof extracted.confidenceScore === "number" && !isNaN(extracted.confidenceScore)
+        ? extracted.confidenceScore
+        : 0.0
     const requiresReview = confidenceScore < 0.80 || !matchedUnitId
 
     return {
@@ -83,7 +86,12 @@ export class AiService {
   }
 
   private async callGeminiVision(base64Image: string, mimeType: string, apiKey: string): Promise<ExtractedLabelData> {
-    const cleanBase64 = base64Image.replace(/^data:image\/[a-z]+;base64,/, "")
+    let effectiveMime = mimeType || "image/jpeg"
+    const match = base64Image.match(/^data:([^;]+);base64,/)
+    if (match) {
+      effectiveMime = match[1]
+    }
+    const cleanBase64 = base64Image.replace(/^data:[^;]+;base64,/, "")
 
     const prompt = `Você é um especialista em logística condominial e extração de dados de etiquetas de transporte.
 Analise a imagem da etiqueta de encomenda fornecida e extraia exclusivamente os dados do DESTINATÁRIO final (morador), ignorando os dados do remetente/loja.
@@ -96,8 +104,10 @@ Retorne um JSON estrito com os campos:
 - confidenceScore (número entre 0.0 e 1.0)
 - uncertaintyReason (string ou null se confidenceScore < 0.8)`
 
+    const model = this.config.get<string>("AI_MODEL_VISION") || this.config.get<string>("GEMINI_MODEL") || "gemini-3.5-flash"
+    this.logger.log(`Invocando Gemini Vision com o modelo: ${model}`)
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

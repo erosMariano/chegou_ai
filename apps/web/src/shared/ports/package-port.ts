@@ -14,7 +14,7 @@ export interface PackagePort {
   checkoutPackage(
     data: CheckoutFormData
   ): Promise<{ success: boolean; packageItem: PackageItem; message: string }>
-  extractLabel(imageName?: string): Promise<ExtractLabelResponse>
+  extractLabel(image?: string, mimeType?: string): Promise<ExtractLabelResponse>
   listEvents(): Promise<PackageEvent[]>
 }
 

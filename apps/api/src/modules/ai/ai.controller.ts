@@ -4,6 +4,7 @@ import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard"
 import { RolesGuard } from "@/common/guards/roles.guard"
 import { Roles } from "@/common/decorators/roles.decorator"
 import { UserRole } from "@prisma/client"
+import { ExtractLabelDto } from "./dto/extract-label.dto"
 
 @Controller("bff/packages")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -12,8 +13,7 @@ export class AiController {
 
   @Post("extract-label")
   @Roles(UserRole.PORTER, UserRole.ADMIN)
-  async extractLabel(@Body() body: { image: string; mimeType?: string }) {
-    return this.aiService.extractLabelFromImage(body.image, body.mimeType || "image/jpeg")
+  async extractLabel(@Body() body: ExtractLabelDto) {
+    return this.aiService.extractLabelFromImage(body?.image, body?.mimeType || "image/jpeg")
   }
 }
-
