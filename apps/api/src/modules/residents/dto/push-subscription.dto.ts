@@ -27,3 +27,4 @@ export class RegisterPushSubscriptionDto {
   @IsString()
   userAgent?: string
 }
+

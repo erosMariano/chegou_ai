@@ -1,4 +1,18 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from "@nestjs/common"
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+  ParseUUIDPipe,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common"
 import { ResidentsService, CreateResidentDto } from "./residents.service"
 import { UpdateResidentDto } from "./dto/create-resident.dto"
 import { RegisterPushSubscriptionDto } from "./dto/push-subscription.dto"
@@ -25,16 +39,22 @@ export class ResidentsController {
   }
 
   @Post("me/push-subscriptions")
-  @Roles(UserRole.RESIDENT, UserRole.ADMIN, UserRole.PORTER)
+  @Roles(UserRole.RESIDENT)
   async registerPushSubscription(
     @Request() req: any,
     @Body() body: RegisterPushSubscriptionDto
   ) {
-    const residents = await this.residentsService.findAll(req.user.unitId)
-    const found = residents.find((r) => r.email === req.user.email) || residents[0]
-    const residentId = found ? found.id : req.user.id
+    if (!req.user.unitId) {
+      throw new ForbiddenException("Apenas moradores vinculados a uma unidade podem receber notificações push de encomenda.")
+    }
 
-    const subscription = await this.residentsService.savePushSubscription(residentId, body)
+    const residents = await this.residentsService.findAll(req.user.unitId)
+    const found = residents.find((r) => r.email.toLowerCase() === req.user.email.toLowerCase())
+    if (!found) {
+      throw new NotFoundException("Cadastro de morador não encontrado para esta conta.")
+    }
+
+    const subscription = await this.residentsService.savePushSubscription(found.id, body)
     return {
       subscriptionId: subscription.id,
       active: subscription.isValid,
@@ -43,7 +63,7 @@ export class ResidentsController {
 
   @Get(":id")
   @Roles(UserRole.ADMIN, UserRole.PORTER)
-  async findOne(@Param("id") id: string) {
+  async findOne(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.residentsService.findOne(id)
   }
 
@@ -55,13 +75,13 @@ export class ResidentsController {
 
   @Put(":id")
   @Roles(UserRole.ADMIN)
-  async update(@Param("id") id: string, @Body() body: UpdateResidentDto) {
+  async update(@Param("id", new ParseUUIDPipe()) id: string, @Body() body: UpdateResidentDto) {
     return this.residentsService.update(id, body)
   }
 
   @Delete(":id")
   @Roles(UserRole.ADMIN)
-  async delete(@Param("id") id: string) {
+  async delete(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.residentsService.delete(id)
   }
 }

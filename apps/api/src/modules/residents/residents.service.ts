@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common"
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from "@nestjs/common"
 import { PrismaService } from "@/prisma/prisma.service"
 import { UserRole } from "@prisma/client"
 import * as bcrypt from "bcryptjs"
@@ -51,11 +51,23 @@ export class ResidentsService {
       throw new BadRequestException(`Unidade com id ${data.unitId} não existe.`)
     }
 
+    const normalizedEmail = data.email.toLowerCase().trim()
+
+    // Proteção de Privilégio (SEC-25): impede que contas administrativas (ADMIN / PORTER) sejam rebaixadas
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    })
+    if (existingUser && existingUser.role !== UserRole.RESIDENT) {
+      throw new ConflictException(
+        `O e-mail ${normalizedEmail} já pertence a uma conta de acesso ${existingUser.role} e não pode ser cadastrado como morador.`
+      )
+    }
+
     const resident = await this.prisma.resident.create({
       data: {
         unitId: data.unitId,
         fullName: data.fullName.trim(),
-        email: data.email.toLowerCase().trim(),
+        email: normalizedEmail,
         phone: data.phone?.trim() || null,
         documentLast4: data.documentLast4?.trim() || null,
         isPrimary: data.isPrimary ?? false,
@@ -72,7 +84,6 @@ export class ResidentsService {
       update: {
         name: resident.fullName,
         unitId: resident.unitId,
-        role: UserRole.RESIDENT,
         isActive: true,
       },
       create: {
@@ -89,13 +100,26 @@ export class ResidentsService {
   }
 
   async update(id: string, data: Partial<CreateResidentDto>) {
-    await this.findOne(id)
+    const current = await this.findOne(id)
+
+    let normalizedEmail: string | undefined
+    if (data.email) {
+      normalizedEmail = data.email.toLowerCase().trim()
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      })
+      if (existingUser && existingUser.id !== current.id && existingUser.role !== UserRole.RESIDENT) {
+        throw new ConflictException(
+          `O e-mail ${normalizedEmail} pertence a uma conta de acesso ${existingUser.role} e não pode ser transferido.`
+        )
+      }
+    }
 
     const updated = await this.prisma.resident.update({
       where: { id },
       data: {
         ...(data.fullName ? { fullName: data.fullName.trim() } : {}),
-        ...(data.email ? { email: data.email.toLowerCase().trim() } : {}),
+        ...(normalizedEmail ? { email: normalizedEmail } : {}),
         ...(data.phone !== undefined ? { phone: data.phone?.trim() || null } : {}),
         ...(data.documentLast4 !== undefined ? { documentLast4: data.documentLast4?.trim() || null } : {}),
         ...(data.isPrimary !== undefined ? { isPrimary: data.isPrimary } : {}),
@@ -108,9 +132,10 @@ export class ResidentsService {
 
     if (data.email || data.fullName || data.unitId) {
       await this.prisma.user.updateMany({
-        where: { email: updated.email },
+        where: { email: current.email },
         data: {
           name: updated.fullName,
+          email: updated.email,
           unitId: updated.unitId,
         },
       })
