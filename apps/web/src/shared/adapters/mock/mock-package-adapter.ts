@@ -7,6 +7,7 @@ import {
   PackageEvent,
 } from "@/entities/package/model/types"
 import { INITIAL_PACKAGES, INITIAL_EVENTS, MOCK_UNITS } from "./mock-data"
+import { generateUUID } from "@/shared/lib/utils"
 
 class MockPackageAdapterImpl implements PackagePort {
   private packages: PackageItem[] = [...INITIAL_PACKAGES]
@@ -42,8 +43,8 @@ class MockPackageAdapterImpl implements PackagePort {
     _idempotencyKey?: string
   ): Promise<PackageItem> {
     const unit = MOCK_UNITS.find((u) => u.id === data.unitId)
-    const newId = crypto.randomUUID()
-    const qrToken = crypto.randomUUID()
+    const newId = generateUUID()
+    const qrToken = generateUUID()
     const pin = Math.floor(100000 + Math.random() * 900000).toString()
     const now = new Date().toISOString()
 
@@ -66,7 +67,7 @@ class MockPackageAdapterImpl implements PackagePort {
     this.packages.unshift(newPackage)
 
     this.events.unshift({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       packageId: newId,
       actorName: "Porteiro em Turno",
       eventType: "CREATED",
@@ -75,7 +76,7 @@ class MockPackageAdapterImpl implements PackagePort {
     })
 
     this.events.unshift({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       packageId: newId,
       actorName: "RabbitMQ Push Worker",
       eventType: "PUSH_SENT",
@@ -116,7 +117,7 @@ class MockPackageAdapterImpl implements PackagePort {
     target.version += 1
 
     this.events.unshift({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       packageId: target.id,
       actorName: "Porteiro em Turno",
       eventType: "DELIVERED",

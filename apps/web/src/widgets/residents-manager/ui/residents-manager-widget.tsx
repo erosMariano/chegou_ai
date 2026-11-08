@@ -442,7 +442,12 @@ export function ResidentsManagerWidget({
                   </Label>
                   <Select value={unitId} onValueChange={(val) => setUnitId(val ?? "")}>
                     <SelectTrigger className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700 shadow-2xs">
-                      <SelectValue placeholder="Selecione a unidade" />
+                      <SelectValue placeholder="Selecione a unidade">
+                        {(() => {
+                          const u = units.find((item) => item.id === unitId)
+                          return u ? `Bl. ${u.block} - Apto ${u.number}` : undefined
+                        })()}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-lg">
                       {units.map((u) => (

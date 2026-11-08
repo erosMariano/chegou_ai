@@ -8,6 +8,7 @@ import {
 import { Unit } from "@/entities/unit/model/types"
 import { Resident } from "@/entities/resident/model/types"
 import { MOCK_UNITS, MOCK_RESIDENTS } from "./mock-data"
+import { generateUUID } from "@/shared/lib/utils"
 
 class MockUnitAdapterImpl implements UnitPort {
   private units: Unit[] = [...MOCK_UNITS]
@@ -25,7 +26,7 @@ class MockUnitAdapterImpl implements UnitPort {
 
   async createUnit(data: CreateUnitInput): Promise<Unit> {
     const newUnit: Unit = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       block: data.block.trim().toUpperCase(),
       number: data.number.trim(),
       isActive: data.isActive ?? true,
@@ -71,7 +72,7 @@ class MockUnitAdapterImpl implements UnitPort {
 
   async createResident(data: CreateResidentInput): Promise<Resident> {
     const newResident: Resident = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       unitId: data.unitId,
       fullName: data.fullName.trim(),
       email: data.email.trim().toLowerCase(),

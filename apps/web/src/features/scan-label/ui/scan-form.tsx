@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner"
 import { Sparkles, ArrowRight, ShieldCheck, AlertCircle, Building2, Check, ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { generateUUID } from "@/shared/lib/utils"
 
 interface ScanFormProps {
   units: Unit[]
@@ -51,6 +52,7 @@ export function ScanForm({ units }: ScanFormProps) {
 
   const currentUnitId = watch("unitId")
   const recipientName = watch("recipientNameRaw")
+  const selectedUnit = units.find((u) => u.id === currentUnitId)
 
   async function handleSimulateScan() {
     try {
@@ -87,7 +89,7 @@ export function ScanForm({ units }: ScanFormProps) {
   async function onSubmit(data: CheckinFormData) {
     try {
       setIsSubmitting(true)
-      const idempotencyKey = crypto.randomUUID()
+      const idempotencyKey = generateUUID()
       const created = await packagePort.checkinPackage(data, idempotencyKey)
 
       toast.success("Check-in concluído e Web Push despachado!", {
@@ -215,7 +217,9 @@ export function ScanForm({ units }: ScanFormProps) {
               onValueChange={(val) => setValue("unitId", val || "", { shouldValidate: true })}
             >
               <SelectTrigger className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700 shadow-2xs">
-                <SelectValue placeholder="Selecione a unidade correspondente..." />
+                <SelectValue placeholder="Selecione a unidade correspondente...">
+                  {selectedUnit ? `Bloco ${selectedUnit.block} - Apto ${selectedUnit.number}` : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-lg">
                 {units.map((u) => (
