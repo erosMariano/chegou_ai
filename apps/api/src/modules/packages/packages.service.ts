@@ -10,7 +10,7 @@ import { RedisService } from "@/common/redis/redis.service"
 import { RabbitMQService } from "@/modules/notifications/rabbitmq.service"
 import * as bcrypt from "bcryptjs"
 import { PackageStatus } from "@prisma/client"
-import { randomUUID } from "crypto"
+import { randomUUID, randomInt } from "crypto"
 
 import { CreatePackageDto, CheckoutPackageDto } from "./dto/package.dto"
 
@@ -35,11 +35,15 @@ export class PackagesService {
     registeredByUserId: string
   ) {
     // 1. Verificação de idempotência no Redis
-    if (idempotencyKey) {
-      const redisKey = `idempotency:package:${idempotencyKey}`
+    const sanitizedKey = idempotencyKey
+      ? idempotencyKey.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 128)
+      : undefined
+
+    if (sanitizedKey) {
+      const redisKey = `idempotency:package:${sanitizedKey}`
       const cached = await this.redis.get(redisKey)
       if (cached) {
-        this.logger.log(`Idempotency hit para chave: ${idempotencyKey}`)
+        this.logger.log(`Idempotency hit para chave: ${sanitizedKey}`)
         return JSON.parse(cached)
       }
     }
@@ -53,8 +57,8 @@ export class PackagesService {
       throw new BadRequestException(`Unidade ${dto.unitId} não encontrada.`)
     }
 
-    // 3. Geração de PIN (6 dígitos numéricos) e QR Token (UUID)
-    const rawPin = Math.floor(100000 + Math.random() * 900000).toString()
+    // 3. Geração criptograficamente segura de PIN (6 dígitos numéricos via CSPRNG) e QR Token (UUID)
+    const rawPin = randomInt(100000, 1000000).toString()
     const pinHash = await bcrypt.hash(rawPin, 10)
     const qrToken = randomUUID()
 
@@ -123,8 +127,8 @@ export class PackagesService {
     }
 
     // 6. Cache de idempotência por 24 horas
-    if (idempotencyKey) {
-      const redisKey = `idempotency:package:${idempotencyKey}`
+    if (sanitizedKey) {
+      const redisKey = `idempotency:package:${sanitizedKey}`
       await this.redis.set(redisKey, JSON.stringify(response), 86400)
     }
 
@@ -138,11 +142,13 @@ export class PackagesService {
     const rawCode = dto.code.trim()
 
     // 1. Rate limiting de tentativas de PIN no Redis (5 tentativas em 5 min)
+    // Escopado por encomenda (packageId) ou unidade (unitId) para evitar DoS operacional na portaria
     if (dto.codeType === "PIN") {
-      const rateLimitKey = `ratelimit:pin_checkout:${actorUserId}`
+      const targetScope = dto.packageId ? `pkg:${dto.packageId}` : dto.unitId ? `unit:${dto.unitId}` : `actor:${actorUserId}`
+      const rateLimitKey = `ratelimit:pin_checkout:${targetScope}`
       const attempts = await this.redis.incrementWithTtl(rateLimitKey, 300)
-      if (attempts > 15) {
-        throw new ConflictException("Muitas tentativas incorretas de retirada. Aguarde 5 minutos.")
+      if (attempts > 5) {
+        throw new ConflictException("Muitas tentativas incorretas para esta retirada. Aguarde 5 minutos.")
       }
     }
 
