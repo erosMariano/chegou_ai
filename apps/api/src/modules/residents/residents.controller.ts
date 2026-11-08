@@ -1,5 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from "@nestjs/common"
 import { ResidentsService, CreateResidentDto } from "./residents.service"
+import { UpdateResidentDto } from "./dto/create-resident.dto"
+import { RegisterPushSubscriptionDto } from "./dto/push-subscription.dto"
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard"
 import { RolesGuard } from "@/common/guards/roles.guard"
 import { Roles } from "@/common/decorators/roles.decorator"
@@ -26,7 +28,7 @@ export class ResidentsController {
   @Roles(UserRole.RESIDENT, UserRole.ADMIN, UserRole.PORTER)
   async registerPushSubscription(
     @Request() req: any,
-    @Body() body: { endpoint: string; keys: { p256dh: string; auth: string }; userAgent?: string }
+    @Body() body: RegisterPushSubscriptionDto
   ) {
     const residents = await this.residentsService.findAll(req.user.unitId)
     const found = residents.find((r) => r.email === req.user.email) || residents[0]
@@ -53,7 +55,7 @@ export class ResidentsController {
 
   @Put(":id")
   @Roles(UserRole.ADMIN)
-  async update(@Param("id") id: string, @Body() body: Partial<CreateResidentDto>) {
+  async update(@Param("id") id: string, @Body() body: UpdateResidentDto) {
     return this.residentsService.update(id, body)
   }
 
