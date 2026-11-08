@@ -12,7 +12,13 @@ export function getApiBaseUrl(): string {
       "http://localhost:8080/api/v1"
     )
   }
-  // Execução Client-Side (Browser / Celular na rede local)
+
+  // Se houver NEXT_PUBLIC_API_URL configurada (ex: produção no Railway/Vercel), priorize-a
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL
+  }
+
+  // Execução Client-Side em ambiente local / desenvolvimento (Celular via IP local)
   if (
     typeof window !== "undefined" &&
     window.location.hostname &&
@@ -22,7 +28,7 @@ export function getApiBaseUrl(): string {
     const protocol = window.location.protocol === "https:" ? "https:" : "http:"
     return `${protocol}//${window.location.hostname}:8080/api/v1`
   }
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"
+  return "http://localhost:8080/api/v1"
 }
 
 export function getAuthToken(): string | null {
