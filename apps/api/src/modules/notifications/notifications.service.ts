@@ -100,7 +100,24 @@ export class NotificationsService implements OnModuleInit {
         }
       }
 
-      const success = allSubscriptions.length === 0 || pushDeliveredCount > 0
+      if (allSubscriptions.length === 0) {
+        this.logger.warn(
+          `⚠️ Nenhuma inscrição push ativa encontrada para a unidade ${payload.block}-${payload.number}. Pacote mantido como RECEIVED.`
+        )
+        await this.prisma.packageEvent.create({
+          data: {
+            packageId: payload.packageId,
+            eventType: "NO_PUSH_SUBSCRIPTIONS",
+            metadata: {
+              unit: `${payload.block}-${payload.number}`,
+              recipientName: payload.recipientName,
+            },
+          },
+        })
+        return true
+      }
+
+      const success = pushDeliveredCount > 0
 
       // 3. Atualizar status do pacote no banco
       const finalStatus = success ? PackageStatus.NOTIFIED : PackageStatus.NOTIFICATION_FAILED
