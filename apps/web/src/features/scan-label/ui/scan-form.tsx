@@ -33,6 +33,8 @@ export function ScanForm({ units }: ScanFormProps) {
   const [aiScore, setAiScore] = useState<number | null>(null)
   const [activeStep, setActiveStep] = useState<1 | 2>(1)
 
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
   const {
     register,
     handleSubmit,
@@ -54,36 +56,65 @@ export function ScanForm({ units }: ScanFormProps) {
   const recipientName = watch("recipientNameRaw")
   const selectedUnit = units.find((u) => u.id === currentUnitId)
 
-  async function handleSimulateScan() {
+  async function processExtraction(base64Image?: string, mimeType?: string) {
     try {
       setIsScanning(true)
-      const res = await packagePort.extractLabel("etiqueta-mock.jpg")
-      setValue("recipientNameRaw", res.extracted.recipientName)
-      setValue("carrier", res.extracted.carrier)
-      setValue("trackingCode", res.extracted.trackingCode)
+      const res = await packagePort.extractLabel(base64Image, mimeType)
+
+      if (res.extracted.recipientName) {
+        setValue("recipientNameRaw", res.extracted.recipientName, { shouldValidate: true })
+      }
+      if (res.extracted.carrier) {
+        setValue("carrier", res.extracted.carrier, { shouldValidate: true })
+      }
+      if (res.extracted.trackingCode) {
+        setValue("trackingCode", res.extracted.trackingCode, { shouldValidate: true })
+      }
+
       setValue("aiConfidenceScore", res.confidenceScore)
       setAiScore(res.confidenceScore)
 
       if (res.matchedUnitId) {
-        setValue("unitId", res.matchedUnitId)
-      } else {
-        const found = units.find(
-          (u) =>
-            u.block.toLowerCase() === res.extracted.unitBlock.toLowerCase() &&
-            u.number === res.extracted.unitNumber
-        )
-        if (found) setValue("unitId", found.id)
+        setValue("unitId", res.matchedUnitId, { shouldValidate: true })
+      } else if (res.extracted.unitNumber) {
+        const targetBlock = (res.extracted.unitBlock || "").toUpperCase().replace(/BLOCO|TORRE/gi, "").trim()
+        const targetNumber = res.extracted.unitNumber.trim()
+        const found = units.find((u) => {
+          const uBlock = u.block.toUpperCase().replace(/BLOCO|TORRE/gi, "").trim()
+          return u.number === targetNumber && (!targetBlock || uBlock === targetBlock || uBlock === "UNICO")
+        })
+        if (found) {
+          setValue("unitId", found.id, { shouldValidate: true })
+        }
       }
 
-      toast.success("Etiqueta extraída pelo Gemini 2.5 Flash!", {
-        description: `Confiança: ${Math.round(res.confidenceScore * 100)}% em ${res.processingTimeMs}ms`,
-      })
+      const scorePct = Math.round(res.confidenceScore * 100)
+      if (res.confidenceScore >= 0.8) {
+        toast.success("Etiqueta analisada com sucesso via Gemini 2.5 Flash!", {
+          description: `Confiança: ${scorePct}% em ${res.processingTimeMs}ms`,
+        })
+      } else {
+        toast.warning("Atenção: Confiança da leitura abaixo de 80%", {
+          description: `A IA identificou ${scorePct}%. Por favor revise o destinatário e a unidade abaixo.`,
+        })
+      }
       setActiveStep(2)
-    } catch {
-      toast.error("Erro ao simular extração por IA")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao processar extração por IA"
+      toast.error(msg)
     } finally {
       setIsScanning(false)
     }
+  }
+
+  function handleCaptureImage(base64Image: string, mimeType: string) {
+    setPreviewUrl(base64Image)
+    processExtraction(base64Image, mimeType)
+  }
+
+  function handleSimulateScan() {
+    setPreviewUrl(null)
+    processExtraction()
   }
 
   async function onSubmit(data: CheckinFormData) {
@@ -148,7 +179,9 @@ export function ScanForm({ units }: ScanFormProps) {
       <ScannerHero
         isScanning={isScanning}
         hasExtracted={aiScore !== null}
-        onTriggerScan={handleSimulateScan}
+        previewUrl={previewUrl}
+        onCaptureImage={handleCaptureImage}
+        onSimulateScan={handleSimulateScan}
       />
 
       {/* Editable Verification Card */}
