@@ -67,6 +67,7 @@ export function ResidentsManagerWidget({
   units,
 }: ResidentsManagerWidgetProps) {
   const [residents, setResidents] = useState<Resident[]>(initialResidents)
+  const [unitsList, setUnitsList] = useState<Unit[]>(units || [])
   const [search, setSearch] = useState("")
   const [filterUnit, setFilterUnit] = useState("ALL")
 
@@ -74,6 +75,12 @@ export function ResidentsManagerWidget({
     unitPort.listAllResidents().then((items: Resident[]) => {
       if (Array.isArray(items) && items.length > 0) {
         setResidents(items)
+      }
+    }).catch(() => {})
+
+    unitPort.listUnits().then((items: Unit[]) => {
+      if (Array.isArray(items) && items.length > 0) {
+        setUnitsList(items)
       }
     }).catch(() => {})
   }, [])
@@ -89,7 +96,7 @@ export function ResidentsManagerWidget({
   const [isPrimary, setIsPrimary] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const unitMap = new Map(units.map((u) => [u.id, u]))
+  const unitMap = new Map(unitsList.map((u) => [u.id, u]))
 
   const filtered = residents.filter((r) => {
     const matchesUnit = filterUnit === "ALL" || r.unitId === filterUnit
@@ -111,10 +118,21 @@ export function ResidentsManagerWidget({
     setFullName("")
     setEmail("")
     setPhone("")
-    setUnitId(units[0]?.id || "")
+    setUnitId(unitsList[0]?.id || "")
     setDocumentLast4("")
     setIsPrimary(false)
     setIsModalOpen(true)
+  }
+
+  function resetFormAndClose() {
+    setEditingResident(null)
+    setFullName("")
+    setEmail("")
+    setPhone("")
+    setUnitId(unitsList[0]?.id || "")
+    setDocumentLast4("")
+    setIsPrimary(false)
+    setIsModalOpen(false)
   }
 
   function openEditModal(res: Resident) {
@@ -160,7 +178,7 @@ export function ResidentsManagerWidget({
         setResidents((prev) => [...prev, created])
         toast.success(`Morador ${created.fullName} cadastrado! Senha inicial: 123456`)
       }
-      setIsModalOpen(false)
+      resetFormAndClose()
     } catch {
       toast.error("Erro ao salvar dados do morador")
     } finally {
@@ -288,7 +306,7 @@ export function ResidentsManagerWidget({
             </SelectTrigger>
             <SelectContent className="rounded-lg">
               <SelectItem value="ALL">Todas as Unidades</SelectItem>
-              {units.map((u) => (
+              {unitsList.map((u) => (
                 <SelectItem key={u.id} value={u.id}>
                   Bloco {u.block} - Apto {u.number}
                 </SelectItem>
@@ -388,7 +406,7 @@ export function ResidentsManagerWidget({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => setIsModalOpen(false)}
+                onClick={resetFormAndClose}
                 className="rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
               >
                 <X className="size-4" />
@@ -452,13 +470,13 @@ export function ResidentsManagerWidget({
                     <SelectTrigger className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-xs font-bold text-zinc-700 shadow-2xs">
                       <SelectValue placeholder="Selecione a unidade">
                         {(() => {
-                          const u = units.find((item) => item.id === unitId)
+                          const u = unitsList.find((item) => item.id === unitId)
                           return u ? `Bl. ${u.block} - Apto ${u.number}` : undefined
                         })()}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-lg">
-                      {units.map((u) => (
+                      {unitsList.map((u) => (
                         <SelectItem key={u.id} value={u.id}>
                           Bl. {u.block} - Apto {u.number}
                         </SelectItem>
@@ -509,7 +527,7 @@ export function ResidentsManagerWidget({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={resetFormAndClose}
                   className="rounded-lg border-zinc-200 text-xs"
                 >
                   Cancelar

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Unit } from "@/entities/unit/model/types"
 import { unitPort } from "@/shared/ports"
 import { Button } from "@/shared/ui/button"
@@ -31,9 +31,20 @@ interface UnitsManagerWidgetProps {
 }
 
 export function UnitsManagerWidget({ initialUnits, residentCounts }: UnitsManagerWidgetProps) {
-  const [units, setUnits] = useState<Unit[]>(initialUnits)
+  const [units, setUnits] = useState<Unit[]>(initialUnits || [])
   const [search, setSearch] = useState("")
   const [filterBlock, setFilterBlock] = useState("ALL")
+
+  useEffect(() => {
+    unitPort
+      .listUnits()
+      .then((items: Unit[]) => {
+        if (Array.isArray(items) && items.length > 0) {
+          setUnits(items)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Modal / Drawer state
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -62,6 +73,14 @@ export function UnitsManagerWidget({ initialUnits, residentCounts }: UnitsManage
     setNumber("")
     setIsActive(true)
     setIsModalOpen(true)
+  }
+
+  function resetFormAndClose() {
+    setEditingUnit(null)
+    setBlock("")
+    setNumber("")
+    setIsActive(true)
+    setIsModalOpen(false)
   }
 
   function openEditModal(unit: Unit) {
@@ -98,7 +117,7 @@ export function UnitsManagerWidget({ initialUnits, residentCounts }: UnitsManage
         setUnits((prev) => [...prev, created])
         toast.success(`Nova unidade Bloco ${created.block} - ${created.number} criada!`)
       }
-      setIsModalOpen(false)
+      resetFormAndClose()
     } catch {
       toast.error("Erro ao salvar unidade")
     } finally {
@@ -320,7 +339,7 @@ export function UnitsManagerWidget({ initialUnits, residentCounts }: UnitsManage
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => setIsModalOpen(false)}
+                onClick={resetFormAndClose}
                 className="rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
               >
                 <X className="size-4" />
@@ -374,7 +393,7 @@ export function UnitsManagerWidget({ initialUnits, residentCounts }: UnitsManage
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={resetFormAndClose}
                   className="rounded-lg border-zinc-200 text-xs"
                 >
                   Cancelar

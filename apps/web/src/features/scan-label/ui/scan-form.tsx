@@ -1,10 +1,10 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { CheckinFormSchema, CheckinFormData } from "@/entities/package/model/schema"
-import { packagePort } from "@/shared/ports"
+import { packagePort, unitPort } from "@/shared/ports"
 import { Unit } from "@/entities/unit/model/types"
 import { ScannerHero } from "./scanner-hero"
 import { Button } from "@/shared/ui/button"
@@ -28,10 +28,26 @@ interface ScanFormProps {
 
 export function ScanForm({ units }: ScanFormProps) {
   const router = useRouter()
+  const [unitsList, setUnitsList] = useState<Unit[]>(units || [])
   const [isScanning, setIsScanning] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [aiScore, setAiScore] = useState<number | null>(null)
   const [activeStep, setActiveStep] = useState<1 | 2>(1)
+
+  useEffect(() => {
+    let isMounted = true
+    unitPort
+      .listUnits()
+      .then((loaded) => {
+        if (isMounted && Array.isArray(loaded) && loaded.length > 0) {
+          setUnitsList(loaded)
+        }
+      })
+      .catch(() => {})
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
@@ -40,6 +56,7 @@ export function ScanForm({ units }: ScanFormProps) {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm<CheckinFormData>({
     resolver: zodResolver(CheckinFormSchema),
@@ -54,7 +71,7 @@ export function ScanForm({ units }: ScanFormProps) {
 
   const currentUnitId = watch("unitId")
   const recipientName = watch("recipientNameRaw")
-  const selectedUnit = units.find((u) => u.id === currentUnitId)
+  const selectedUnit = unitsList.find((u) => u.id === currentUnitId)
 
   async function processExtraction(base64Image?: string, mimeType?: string) {
     try {
@@ -79,7 +96,7 @@ export function ScanForm({ units }: ScanFormProps) {
       } else if (res.extracted.unitNumber) {
         const targetBlock = (res.extracted.unitBlock || "").toUpperCase().replace(/BLOCO|TORRE/gi, "").trim()
         const targetNumber = res.extracted.unitNumber.trim()
-        const found = units.find((u) => {
+        const found = unitsList.find((u) => {
           const uBlock = u.block.toUpperCase().replace(/BLOCO|TORRE/gi, "").trim()
           return u.number === targetNumber && (!targetBlock || uBlock === targetBlock || uBlock === "UNICO")
         })
@@ -126,6 +143,18 @@ export function ScanForm({ units }: ScanFormProps) {
       toast.success("Check-in concluído e Web Push despachado!", {
         description: `Notificação enviada para ${created.recipientNameRaw} (${created.unit?.block}-${created.unit?.number})`,
       })
+
+      // Limpa todos os campos do formulário e estados de imagem/IA
+      reset({
+        recipientNameRaw: "",
+        unitId: "",
+        carrier: "",
+        trackingCode: "",
+        aiConfidenceScore: null,
+      })
+      setPreviewUrl(null)
+      setAiScore(null)
+      setActiveStep(1)
 
       router.push("/portaria")
     } catch (err: unknown) {
@@ -255,7 +284,7 @@ export function ScanForm({ units }: ScanFormProps) {
                 </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-lg">
-                {units.map((u) => (
+                {unitsList.map((u) => (
                   <SelectItem key={u.id} value={u.id}>
                     Bloco {u.block} - Apto {u.number}
                   </SelectItem>
@@ -265,7 +294,7 @@ export function ScanForm({ units }: ScanFormProps) {
 
             {/* Quick chips for most frequent units */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-              {units.slice(0, 6).map((u) => {
+              {unitsList.slice(0, 6).map((u) => {
                 const isSelected = currentUnitId === u.id
                 return (
                   <Button
