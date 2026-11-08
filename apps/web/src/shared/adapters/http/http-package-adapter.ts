@@ -18,7 +18,10 @@ export class HttpPackageAdapter implements PackagePort {
     if (filter?.status && filter.status !== "ALL") params.append("status", filter.status)
     if (filter?.unitId && filter.unitId !== "ALL") params.append("unitId", filter.unitId)
     const query = params.toString() ? `?${params.toString()}` : ""
-    return httpGet<PackageItem[]>(`/packages${query}`, [])
+    const res = await httpGet<any>(`/packages${query}`, [])
+    if (Array.isArray(res)) return res
+    if (res && Array.isArray(res.items)) return res.items
+    return []
   }
 
   async getPackageById(id: string): Promise<PackageItem | null> {
