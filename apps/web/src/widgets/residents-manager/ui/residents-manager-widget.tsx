@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Resident } from "@/entities/resident/model/types"
 import { Unit } from "@/entities/unit/model/types"
 import { unitPort } from "@/shared/ports"
@@ -69,6 +69,14 @@ export function ResidentsManagerWidget({
   const [residents, setResidents] = useState<Resident[]>(initialResidents)
   const [search, setSearch] = useState("")
   const [filterUnit, setFilterUnit] = useState("ALL")
+
+  useEffect(() => {
+    unitPort.listAllResidents().then((items: Resident[]) => {
+      if (Array.isArray(items) && items.length > 0) {
+        setResidents(items)
+      }
+    }).catch(() => {})
+  }, [])
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)

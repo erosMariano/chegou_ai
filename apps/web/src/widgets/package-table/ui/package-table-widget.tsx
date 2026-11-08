@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { PackageItem } from "@/entities/package/model/types"
+import { packagePort } from "@/shared/ports"
 import { PackageCard } from "@/entities/package/ui/package-card"
 import { Input } from "@/shared/ui/input"
 import {
@@ -18,9 +19,17 @@ interface PackageTableWidgetProps {
 }
 
 export function PackageTableWidget({ initialPackages }: PackageTableWidgetProps) {
-  const [packages] = useState<PackageItem[]>(initialPackages)
+  const [packages, setPackages] = useState<PackageItem[]>(initialPackages)
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("ALL")
+
+  useEffect(() => {
+    packagePort.listPackages().then((items) => {
+      if (Array.isArray(items)) {
+        setPackages(items)
+      }
+    }).catch(() => {})
+  }, [])
 
   const filtered = packages.filter((pkg) => {
     const matchesStatus = status === "ALL" || pkg.status === status
