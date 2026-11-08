@@ -26,15 +26,21 @@ async function bootstrap() {
     "http://127.0.0.1:3000",
     /^http:\/\/192\.168\.\d+\.\d+:3000$/,
     /^http:\/\/10\.\d+\.\d+\.\d+:3000$/,
+    /^https:\/\/chegou-ai.*\.vercel\.app$/,
   ]
 
   if (process.env.FRONTEND_URL) {
-    allowedOrigins.push(process.env.FRONTEND_URL.trim())
+    const cleanUrl = process.env.FRONTEND_URL.trim().replace(/\/+$/, "")
+    allowedOrigins.push(cleanUrl)
+    allowedOrigins.push(`${cleanUrl}/`)
   }
   if (process.env.ALLOWED_ORIGINS) {
     process.env.ALLOWED_ORIGINS.split(",").forEach((o) => {
-      const trimmed = o.trim()
-      if (trimmed) allowedOrigins.push(trimmed)
+      const trimmed = o.trim().replace(/\/+$/, "")
+      if (trimmed) {
+        allowedOrigins.push(trimmed)
+        allowedOrigins.push(`${trimmed}/`)
+      }
     })
   }
 
