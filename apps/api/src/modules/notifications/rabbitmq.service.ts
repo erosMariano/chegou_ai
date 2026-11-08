@@ -10,12 +10,24 @@ export const PACKAGE_DLQ = "chegou.package.received.dlq"
 export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   private connection: any = null
   private channel: any = null
+  private connectPromise: Promise<void> | null = null
   private readonly logger = new Logger(RabbitMQService.name)
 
   constructor(private readonly config: ConfigService) {}
 
   async onModuleInit() {
-    await this.connect()
+    this.connectPromise = this.connect()
+    await this.connectPromise
+  }
+
+  private async ensureConnected() {
+    if (this.connectPromise) {
+      await this.connectPromise
+    }
+    if (!this.channel) {
+      this.connectPromise = this.connect()
+      await this.connectPromise
+    }
   }
 
   async onModuleDestroy() {
@@ -61,6 +73,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     carrier?: string
     pickupPin: string
   }) {
+    await this.ensureConnected()
     if (!this.channel) {
       this.logger.warn("Canal do RabbitMQ não disponível para publicação.")
       return false
@@ -73,7 +86,13 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
   }
 
   async consumePackageReceived(callback: (payload: any) => Promise<boolean>) {
-    if (!this.channel) return
+    await this.ensureConnected()
+    if (!this.channel) {
+      this.logger.warn("Canal do RabbitMQ não disponível para consumo.")
+      return
+    }
+
+    this.logger.log("🐰 Worker do RabbitMQ registrado para consumo de encomendas recebidas.")
 
     await this.channel.consume(
       PACKAGE_RECEIVED_QUEUE,

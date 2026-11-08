@@ -105,26 +105,32 @@ export class NotificationsService implements OnModuleInit {
       // 3. Atualizar status do pacote no banco
       const finalStatus = success ? PackageStatus.NOTIFIED : PackageStatus.NOTIFICATION_FAILED
 
-      await this.prisma.package.update({
+      const pkgExists = await this.prisma.package.findUnique({
         where: { id: payload.packageId },
-        data: {
-          status: finalStatus,
-          notifiedAt: new Date(),
-        },
       })
 
-      // 4. Registrar evento de auditoria
-      await this.prisma.packageEvent.create({
-        data: {
-          packageId: payload.packageId,
-          eventType: success ? "PUSH_SENT" : "PUSH_FAILED",
-          metadata: {
-            totalSubscriptions: allSubscriptions.length,
-            deliveredCount: pushDeliveredCount,
-            carrier: payload.carrier,
+      if (pkgExists) {
+        await this.prisma.package.update({
+          where: { id: payload.packageId },
+          data: {
+            status: finalStatus,
+            notifiedAt: new Date(),
           },
-        },
-      })
+        })
+
+        // 4. Registrar evento de auditoria
+        await this.prisma.packageEvent.create({
+          data: {
+            packageId: payload.packageId,
+            eventType: success ? "PUSH_SENT" : "PUSH_FAILED",
+            metadata: {
+              totalSubscriptions: allSubscriptions.length,
+              deliveredCount: pushDeliveredCount,
+              carrier: payload.carrier,
+            },
+          },
+        })
+      }
 
       this.logger.log(`✅ Notificação do pacote ${payload.packageId} concluída com status: ${finalStatus}`)
       return true

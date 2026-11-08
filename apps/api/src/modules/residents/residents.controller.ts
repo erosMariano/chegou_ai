@@ -28,8 +28,8 @@ export class ResidentsController {
     @Request() req: any,
     @Body() body: { endpoint: string; keys: { p256dh: string; auth: string }; userAgent?: string }
   ) {
-    const resident = await this.residentsService.findAll()
-    const found = resident.find((r) => r.email === req.user.email)
+    const residents = await this.residentsService.findAll(req.user.unitId)
+    const found = residents.find((r) => r.email === req.user.email) || residents[0]
     const residentId = found ? found.id : req.user.id
 
     const subscription = await this.residentsService.savePushSubscription(residentId, body)
