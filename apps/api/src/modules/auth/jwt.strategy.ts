@@ -17,10 +17,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly config: ConfigService,
     private readonly prisma: PrismaService
   ) {
+    const jwtSecret = config.get<string>("JWT_SECRET")
+    if (process.env.NODE_ENV === "production" && (!jwtSecret || jwtSecret.length < 32)) {
+      throw new Error("FATAL: JWT_SECRET seguro (>= 32 chars) é obrigatório em produção.")
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>("JWT_SECRET") || "chegou_ai_super_secret_jwt_key_development_2026",
+      secretOrKey: jwtSecret || "chegou_ai_super_secret_jwt_key_development_2026",
     })
   }
 

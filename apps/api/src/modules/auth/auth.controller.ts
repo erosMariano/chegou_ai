@@ -11,7 +11,7 @@ export class AuthController {
   @Post("login")
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // Anti-Brute-Force: máximo 5 tentativas por minuto
   async login(@Body() body: LoginDto) {
-    return this.authService.login(body.email, body.password || "123456")
+    return this.authService.login(body.email, body.password)
   }
 
   @Post("demo/:role")
