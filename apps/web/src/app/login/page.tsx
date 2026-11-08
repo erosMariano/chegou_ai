@@ -73,12 +73,12 @@ export default function LoginPage() {
     }
   }
 
-  if (isLoading) {
+  if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F4F4F3]">
         <div className="flex flex-col items-center gap-3">
           <div className="size-10 rounded-full border-2 border-zinc-900 border-t-transparent animate-spin" />
-          <p className="text-xs font-medium text-zinc-500">Carregando sessão...</p>
+          <p className="text-xs font-medium text-zinc-500">Redirecionando para seu painel...</p>
         </div>
       </div>
     )

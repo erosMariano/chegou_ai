@@ -23,8 +23,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Initial load from localStorage
-    setUser(authGateway.getCurrentSession())
-    setIsLoading(false)
+    try {
+      setUser(authGateway.getCurrentSession())
+    } catch (err) {
+      console.error("[AuthProvider] Falha ao recuperar sessão local:", err)
+    } finally {
+      setIsLoading(false)
+    }
 
     // Listen for session changes across tabs/windows
     const unsubscribe = authGateway.subscribe((updatedSession) => {
