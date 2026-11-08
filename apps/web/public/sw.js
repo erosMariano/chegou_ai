@@ -31,8 +31,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "📦 Sua encomenda chegou!"
   const options = {
     body: data.body || "Apresente seu PIN na portaria para retirar sua entrega.",
-    icon: data.icon || "/file.svg",
-    badge: data.badge || "/file.svg",
+    icon: data.icon || "/icons/icon-192x192.png",
+    badge: data.badge || "/icons/icon-192x192.png",
     vibrate: [150, 50, 150, 50, 200],
     data: data.data || { url: "/morador" },
     tag: `package-notification-${Date.now()}`,

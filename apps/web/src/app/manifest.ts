@@ -1,0 +1,30 @@
+import type { MetadataRoute } from "next"
+
+export default function manifest(): MetadataRoute.Manifest {
+  return {
+    name: "Chegou.AI — Encomendas de Condomínio",
+    short_name: "Chegou.AI",
+    description: "Gestão e aviso inteligente de encomendas para condomínios com IA e PIN de retirada.",
+    start_url: "/morador",
+    scope: "/",
+    display: "standalone",
+    orientation: "portrait-primary",
+    background_color: "#18181B",
+    theme_color: "#18181B",
+    icons: [
+      {
+        src: "/icons/icon-192x192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "maskable",
+      },
+      {
+        src: "/icons/icon-512x512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+    ],
+  }
+}
+
