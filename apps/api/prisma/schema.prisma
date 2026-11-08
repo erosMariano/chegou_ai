@@ -130,3 +130,36 @@ model PackageEvent {
   @@map("package_events")
 }
 
+model Condominium {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(150)
+  cnpj      String?  @db.VarChar(18)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  addresses CondominiumAddress[]
+
+  @@map("condominiums")
+}
+
+model CondominiumAddress {
+  id             String      @id @default(uuid()) @db.Uuid
+  condominiumId  String      @map("condominium_id") @db.Uuid
+  label          String      @db.VarChar(100)
+  street         String      @db.VarChar(200)
+  number         String      @db.VarChar(20)
+  neighborhood   String      @db.VarChar(100)
+  city           String      @db.VarChar(100)
+  state          String      @db.VarChar(2)
+  zipCode        String      @map("zip_code") @db.VarChar(10)
+  addressAliases String[]    @default([]) @map("address_aliases")
+  isPrimary      Boolean     @default(false) @map("is_primary")
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  condominium Condominium @relation(fields: [condominiumId], references: [id], onDelete: Cascade)
+
+  @@index([condominiumId], map: "idx_condominium_addresses_condominium_id")
+  @@map("condominium_addresses")
+}
+
