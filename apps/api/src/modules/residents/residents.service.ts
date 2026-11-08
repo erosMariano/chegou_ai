@@ -152,6 +152,7 @@ export class ResidentsService {
         trackingCode: pkg.trackingCode,
         recipientNameRaw: pkg.recipientNameRaw,
         status: pkg.status,
+        pickupPin: pkg.pickupPin,
         pickupQrToken: pkg.pickupQrToken,
         receivedAt: pkg.receivedAt.toISOString(),
         notifiedAt: pkg.notifiedAt?.toISOString() || null,
