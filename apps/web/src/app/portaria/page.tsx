@@ -2,6 +2,8 @@ import { ConciergeHeader } from "@/widgets/concierge-header/ui/concierge-header"
 import { PackageTableWidget } from "@/widgets/package-table/ui/package-table-widget"
 import { packagePort } from "@/shared/ports"
 
+export const instant = false
+
 export default async function PortariaPage() {
   const packages = await packagePort.listPackages()
 

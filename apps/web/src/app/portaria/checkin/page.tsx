@@ -2,6 +2,8 @@ import { ConciergeHeader } from "@/widgets/concierge-header/ui/concierge-header"
 import { ScanForm } from "@/features/scan-label/ui/scan-form"
 import { unitPort } from "@/shared/ports"
 
+export const instant = false
+
 export default async function CheckinPage() {
   const units = await unitPort.listUnits()
 
