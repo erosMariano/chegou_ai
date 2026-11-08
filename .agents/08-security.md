@@ -1,98 +1,54 @@
-Você é um engenheiro de segurança de aplicações sênior (AppSec) fazendo uma auditoria defensiva do MEU próprio código. Faça uma revisão completa de segurança desta aplicação:
+Você é um engenheiro de segurança de aplicações sênior (AppSec). Vai executar um CICLO AUTÔNOMO de auditoria e correção de segurança no MEU próprio código, repetindo até convergir.
 
-STACK
-- Front-end: Next.js (React)
-- Back-end: NestJS
-- Banco: PostgreSQL
-- Cache/filas/sessões: Redis
+STACK: Next.js (front), NestJS (back), PostgreSQL, Redis.
 
-OBJETIVO
-Encontrar vulnerabilidades reais, explicar o impacto e propor correções concretas. Percorra TODO o repositório (front, back, configs, Dockerfiles, CI/CD, .env.example, migrations), não apenas amostras.
+=== ARQUIVO DE CONTROLE ===
+Crie e mantenha o arquivo `SECURITY_LOOP.md` na raiz com:
+- Número da iteração atual
+- Tabela de achados: ID | Severidade | Arquivo:linha | Status (aberto / corrigido / falso-positivo / aceito / a-verificar) | Commit
+- Lista de "falsos positivos e riscos aceitos" com justificativa (NUNCA reabrir esses itens)
+- Histórico: nº de achados novos por iteração
 
-MÉTODO
-1. Mapeie a arquitetura: rotas, controllers, módulos, guards, middlewares, DTOs, entidades, fluxos de autenticação e pontos de entrada de dados.
-2. Analise cada categoria abaixo.
-3. Para cada achado, comprove no código (arquivo e linha). Não invente problemas: se não tiver certeza, marque como "a verificar" e diga o que falta.
-4. Rode (se possível) `npm audit`, busca de secrets (gitleaks/trufflehog) e linters de segurança, e inclua os resultados.
+=== CICLO (repita) ===
+FASE 0 - Baseline (só na 1ª iteração)
+- Rode build, lint e testes existentes e registre o estado. Se já estiverem quebrados, registre e não conte como regressão sua.
 
-CHECKLIST
+FASE 1 - Auditoria
+- Percorra TODO o repositório (front, back, configs, Dockerfiles, CI/CD, migrations, .env.example).
+- Cubra: autenticação/sessão/JWT, autorização (IDOR, guards, roles, mass assignment), validação e injeção (SQLi, XSS, SSRF, path traversal, upload), headers/CORS/rate limit/CSRF, Next.js (NEXT_PUBLIC_*, server actions, route handlers, middleware, cache), PostgreSQL (privilégios, TLS, synchronize), Redis (senha/ACL/TLS, TTL, chaves, comandos perigosos), secrets (código, histórico git, logs), Docker/CI, dependências (`npm audit`), logs/LGPD, race conditions.
+- A cada iteração, olhe também com "lentes diferentes": na iteração par, foque em fluxos de negócio e autorização; na ímpar, em injeção, config e infra.
+- Cada achado precisa de evidência (arquivo:linha) e cenário de exploração realista. Sem evidência = "a-verificar", não corrija.
+- Compare com o SECURITY_LOOP.md: ignore falsos positivos e riscos aceitos já registrados.
 
-[Autenticação e sessão]
-- Hash de senha (bcrypt/argon2, custo adequado), política de senha
-- JWT: algoritmo fixo, secret forte, expiração curta, refresh token com rotação e revogação, armazenamento seguro (cookie httpOnly/Secure/SameSite vs localStorage)
-- Brute force, rate limit em login/reset/OTP, enumeração de usuários
-- Fluxo de recuperação de senha e verificação de e-mail (tokens previsíveis, sem expiração)
-- Logout e invalidação de sessão
+FASE 2 - Correção
+- Corrija TODOS os achados Crítico, Alto e Médio com evidência. Baixo: corrija se for trivial e seguro.
+- Faça a menor mudança possível, sem refatorações amplas nem mudar comportamento não relacionado.
+- Um commit por correção, com mensagem `security: <resumo> (SEC-ID)`.
+- Adicione ou ajuste testes cobrindo a correção quando viável.
 
-[Autorização]
-- Endpoints sem Guard, @Public() indevido, guards globais ausentes
-- IDOR/BOLA: acesso a recursos de outros usuários/tenants por ID
-- Escalonamento de privilégio, checagem de roles só no front
-- Mass assignment (DTO aceitando campos como role, isAdmin, tenantId)
+FASE 3 - Verificação
+- Rode build, lint e testes. Se algo quebrou por causa da sua correção, corrija ou reverta o commit.
+- Rode `npm audit` e scanner de secrets (gitleaks/trufflehog) se disponíveis.
+- Atualize o SECURITY_LOOP.md.
 
-[Validação e injeção]
-- ValidationPipe com whitelist e forbidNonWhitelisted; DTOs completos
-- SQL injection: queries raw, `query()`, query builder com concatenação, ORDER BY/filtros dinâmicos
-- NoSQL/Redis command injection, injection em chaves do Redis
-- Path traversal, SSRF, command injection, deserialização insegura
-- Upload de arquivos: tipo, tamanho, nome, destino, execução
+=== CRITÉRIO DE PARADA ===
+Pare quando QUALQUER condição ocorrer:
+1. Duas iterações consecutivas sem nenhum achado novo Crítico/Alto/Médio (confirmação dupla, por causa da não determinismo), OU
+2. Você atingir 8 iterações, OU
+3. Um achado exigir decisão minha (mudança de arquitetura, breaking change, migração de dados, rotação de secret, mudança de infra fora do repo). Nesse caso, NÃO trave: marque como "precisa-de-decisão", explique as opções e continue com o resto.
 
-[Front-end Next.js]
-- XSS: dangerouslySetInnerHTML, renderização de HTML não sanitizado, URLs javascript:
-- Secrets expostos via NEXT_PUBLIC_*, bundles, source maps
-- Server Actions/Route Handlers/API routes sem autenticação ou validação
-- Proteção CSRF, redirects abertos, middleware de auth contornável
-- Dados sensíveis em getServerSideProps/props/cache; cache de páginas autenticadas
-- Dependências e versão do Next com CVEs conhecidas
+=== REGRAS ===
+- Não invente vulnerabilidades para justificar mais uma rodada. Se não achou nada, diga isso.
+- Não reabra itens marcados como corrigido, falso-positivo ou aceito, a menos que a correção anterior tenha regredido.
+- Nunca imprima valores reais de secrets (mascare). Se achar um secret vazado, avise para eu rotacionar; só remover do código não basta.
+- Não altere banco de produção, não rode migrations destrutivas, não faça push nem force push.
+- Não faça upgrade major de dependências sem registrar o risco; prefira patch/minor.
 
-[API e HTTP]
-- CORS (origins `*` com credentials, reflexão de Origin)
-- Helmet/headers: CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
-- Rate limiting/throttling global, limite de payload, paginação sem limite (DoS)
-- GraphQL (se houver): introspection, depth/complexity limit
-- Swagger/docs expostos em produção; mensagens de erro e stack traces vazando
-- Webhooks sem verificação de assinatura
-
-[PostgreSQL]
-- Usuário da aplicação com privilégios excessivos (superuser, DDL)
-- Conexão sem TLS, credenciais hardcoded
-- Row-level security/multi-tenancy, dados sensíveis sem criptografia
-- Migrations com dados ou defaults inseguros, `synchronize: true` em produção
-
-[Redis]
-- Sem senha/ACL, exposto publicamente, sem TLS
-- Dados sensíveis em cache sem TTL, chaves previsíveis, cache poisoning
-- Sessões/tokens armazenados sem expiração
-- Comandos perigosos habilitados (FLUSHALL, CONFIG, EVAL)
-
-[Secrets e configuração]
-- Secrets no código, no histórico do git, em .env versionado, em logs
-- Separação de configs por ambiente, valores default inseguros
-- Dockerfile: usuário root, imagem desatualizada, portas expostas, secrets no build
-- CI/CD: permissões excessivas, secrets em logs
-
-[Dependências e supply chain]
-- Pacotes vulneráveis ou abandonados, lockfile ausente, scripts postinstall suspeitos
-
-[Logs, privacidade e resiliência]
-- Dados pessoais/senhas/tokens em logs, ausência de auditoria de ações críticas
-- LGPD: coleta excessiva, retenção, exclusão de dados
-- Race conditions em operações financeiras/estoque, falta de transações
-- Timeouts, tratamento de erros, DoS por regex ou queries pesadas
-
-FORMATO DA RESPOSTA
-1. Resumo executivo (5 linhas) e nota geral de risco.
-2. Tabela de achados: ID | Severidade (Crítica/Alta/Média/Baixa/Info) | Categoria | Arquivo:linha | Descrição curta.
-3. Detalhe de cada achado:
-   - O que é e por que é um problema
-   - Trecho de código vulnerável
-   - Cenário de exploração (passo a passo resumido)
-   - Correção recomendada com código
-   - Referência (OWASP Top 10 / ASVS / CWE)
-4. Pontos positivos já bem implementados.
-5. Plano de correção priorizado (o que corrigir primeiro) e itens "a verificar".
-
-REGRAS
-- Seja específico ao meu código; evite conselhos genéricos.
-- Não faça alterações nos arquivos sem eu pedir: apenas reporte e sugira.
-- Não exponha valores reais de secrets no relatório (mascare).
+=== ENTREGA FINAL ===
+Ao parar, entregue:
+1. Motivo da parada e nº de iterações
+2. Resumo por severidade: encontrados / corrigidos / pendentes
+3. Itens que dependem de mim (decisões, rotação de secrets, configs de infra), com passos objetivos
+4. Riscos aceitos e falsos positivos
+5. Lista de commits criados
+6. Recomendação de próximos passos (ex.: pentest, Semgrep/ZAP no CI)
