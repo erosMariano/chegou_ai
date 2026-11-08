@@ -147,7 +147,7 @@ export class ResidentsService {
   async delete(id: string) {
     const res = await this.findOne(id)
     await this.prisma.user.deleteMany({
-      where: { email: res.email },
+      where: { email: res.email, role: UserRole.RESIDENT },
     })
     return this.prisma.resident.delete({
       where: { id },
