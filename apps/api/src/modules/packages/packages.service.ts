@@ -12,19 +12,9 @@ import * as bcrypt from "bcryptjs"
 import { PackageStatus } from "@prisma/client"
 import { randomUUID } from "crypto"
 
-export interface CreatePackageDto {
-  unitId: string
-  recipientNameRaw: string
-  trackingCode?: string
-  carrier?: string
-  aiConfidenceScore?: number
-}
+import { CreatePackageDto, CheckoutPackageDto } from "./dto/package.dto"
 
-export interface CheckoutPackageDto {
-  code: string
-  codeType: "PIN" | "QR"
-  residentId?: string
-}
+export { CreatePackageDto, CheckoutPackageDto }
 
 @Injectable()
 export class PackagesService {
