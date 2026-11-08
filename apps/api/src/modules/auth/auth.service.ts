@@ -12,9 +12,31 @@ export class AuthService {
   ) {}
 
   async login(email: string, pass: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
+    const normalizedEmail = (email || "").toLowerCase().trim()
+    let user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
     })
+
+    if (!user) {
+      // Morador cadastrado pelo síndico que ainda não possui registro em User
+      const resident = await this.prisma.resident.findFirst({
+        where: { email: normalizedEmail },
+      })
+
+      if (resident) {
+        const passwordHash = await bcrypt.hash("123456", 10)
+        user = await this.prisma.user.create({
+          data: {
+            name: resident.fullName,
+            email: resident.email,
+            passwordHash,
+            role: UserRole.RESIDENT,
+            unitId: resident.unitId,
+            isActive: true,
+          },
+        })
+      }
+    }
 
     if (!user || !user.isActive) {
       throw new UnauthorizedException("Credenciais inválidas ou conta inativa.")
@@ -22,7 +44,9 @@ export class AuthService {
 
     const isMatch = await bcrypt.compare(pass, user.passwordHash)
     if (!isMatch) {
-      throw new UnauthorizedException("Credenciais inválidas.")
+      throw new UnauthorizedException(
+        "Credenciais inválidas. Para novos moradores, a senha inicial padrão é 123456."
+      )
     }
 
     return this.buildUserSession(user)

@@ -25,33 +25,30 @@ interface ResidentPortalViewProps {
 
 export function ResidentPortalView({ initialPackages }: ResidentPortalViewProps) {
   const { user } = useAuth()
-  const [packages, setPackages] = useState<PackageItem[]>(initialPackages)
+  const [packages, setPackages] = useState<PackageItem[]>([])
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [justDeliveredPackage, setJustDeliveredPackage] = useState<PackageItem | null>(null)
 
   // Guardar IDs pendentes para detectar quando o porteiro der baixa
-  const previousPendingIdsRef = useRef<Set<string>>(
-    new Set(
-      initialPackages
-        .filter((p) => p.status === "RECEIVED" || p.status === "NOTIFIED")
-        .map((p) => p.id)
-    )
-  )
+  const previousPendingIdsRef = useRef<Set<string>>(new Set())
 
   const fetchPackages = useCallback(async (isManual = false) => {
     try {
       if (isManual) setIsRefreshing(true)
       const all = await packagePort.listPackages()
 
-      // Filtra para a unidade do morador logado (ou padrão Bloco B - 402 se demo)
-      const targetBlock = user?.unit?.block || "B"
-      const targetNumber = user?.unit?.number || "402"
+      // Filtra estritamente para a unidade do morador logado
+      const targetBlock = user?.unit?.block || ""
+      const targetNumber = user?.unit?.number || ""
 
-      const residentPkgs = all.filter(
-        (p) =>
-          p.unit?.block?.toUpperCase() === targetBlock.toUpperCase() &&
-          p.unit?.number === targetNumber
-      )
+      const residentPkgs =
+        targetBlock && targetNumber
+          ? all.filter(
+              (p) =>
+                p.unit?.block?.toUpperCase() === targetBlock.toUpperCase() &&
+                p.unit?.number === targetNumber
+            )
+          : []
 
       // Detectar se algum pacote que antes estava pendente agora foi entregue
       for (const pkg of residentPkgs) {
@@ -104,9 +101,9 @@ export function ResidentPortalView({ initialPackages }: ResidentPortalViewProps)
   // Encomendas já entregues
   const deliveredPackages = packages.filter((p) => p.status === "DELIVERED")
 
-  const residentName = user?.name || "Mariana Costa"
-  const residentBlock = user?.unit?.block || "B"
-  const residentNumber = user?.unit?.number || "402"
+  const residentName = user?.name || "Morador"
+  const residentBlock = user?.unit?.block || ""
+  const residentNumber = user?.unit?.number || ""
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">

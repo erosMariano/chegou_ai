@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common"
 import { PrismaService } from "@/prisma/prisma.service"
+import { UserRole } from "@prisma/client"
+import * as bcrypt from "bcryptjs"
 
 export interface CreateResidentDto {
   unitId: string
@@ -55,7 +57,7 @@ export class ResidentsService {
       throw new BadRequestException(`Unidade com id ${data.unitId} não existe.`)
     }
 
-    return this.prisma.resident.create({
+    const resident = await this.prisma.resident.create({
       data: {
         unitId: data.unitId,
         fullName: data.fullName.trim(),
@@ -68,12 +70,34 @@ export class ResidentsService {
         unit: true,
       },
     })
+
+    // Sincroniza usuário operacional para o morador poder logar
+    const defaultPasswordHash = await bcrypt.hash("123456", 10)
+    await this.prisma.user.upsert({
+      where: { email: resident.email },
+      update: {
+        name: resident.fullName,
+        unitId: resident.unitId,
+        role: UserRole.RESIDENT,
+        isActive: true,
+      },
+      create: {
+        name: resident.fullName,
+        email: resident.email,
+        passwordHash: defaultPasswordHash,
+        role: UserRole.RESIDENT,
+        unitId: resident.unitId,
+        isActive: true,
+      },
+    })
+
+    return resident
   }
 
   async update(id: string, data: Partial<CreateResidentDto>) {
     await this.findOne(id)
 
-    return this.prisma.resident.update({
+    const updated = await this.prisma.resident.update({
       where: { id },
       data: {
         ...(data.fullName ? { fullName: data.fullName.trim() } : {}),
@@ -87,10 +111,25 @@ export class ResidentsService {
         unit: true,
       },
     })
+
+    if (data.email || data.fullName || data.unitId) {
+      await this.prisma.user.updateMany({
+        where: { email: updated.email },
+        data: {
+          name: updated.fullName,
+          unitId: updated.unitId,
+        },
+      })
+    }
+
+    return updated
   }
 
   async delete(id: string) {
-    await this.findOne(id)
+    const res = await this.findOne(id)
+    await this.prisma.user.deleteMany({
+      where: { email: res.email },
+    })
     return this.prisma.resident.delete({
       where: { id },
     })

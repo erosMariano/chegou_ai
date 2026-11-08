@@ -150,7 +150,7 @@ export function ResidentsManagerWidget({
           isPrimary,
         })
         setResidents((prev) => [...prev, created])
-        toast.success(`Morador ${created.fullName} cadastrado com sucesso!`)
+        toast.success(`Morador ${created.fullName} cadastrado! Senha inicial: 123456`)
       }
       setIsModalOpen(false)
     } catch {
@@ -485,6 +485,16 @@ export function ResidentsManagerWidget({
                 <Label htmlFor="isPrimary" className="text-xs font-medium text-zinc-700 cursor-pointer">
                   Definir como Morador Titular da unidade
                 </Label>
+              </div>
+
+              <div className="rounded-lg bg-zinc-50 border border-zinc-200 p-3 text-xs text-zinc-600 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-zinc-900">
+                  <Lock className="size-3.5 text-zinc-700" />
+                  <span>Acesso ao Portal do Morador</span>
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  O morador poderá acessar o portal com este e-mail e a senha inicial <strong>123456</strong>.
+                </p>
               </div>
 
               <div className="pt-4 border-t border-zinc-100 flex items-center justify-end gap-2">
