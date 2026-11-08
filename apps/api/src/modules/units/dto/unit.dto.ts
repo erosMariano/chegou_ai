@@ -8,6 +8,10 @@ export class CreateUnitDto {
   @IsString()
   @MinLength(1, { message: "Número do apartamento é obrigatório" })
   number: string
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean
 }
 
 export class UpdateUnitDto {

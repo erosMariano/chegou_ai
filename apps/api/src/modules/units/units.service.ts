@@ -50,7 +50,7 @@ export class UnitsService {
     return unit
   }
 
-  async create(data: { block?: string; number: string }) {
+  async create(data: { block?: string; number: string; isActive?: boolean }) {
     const block = (data.block || "UNICO").toUpperCase().trim()
     const number = data.number.trim()
 
@@ -66,7 +66,7 @@ export class UnitsService {
       data: {
         block,
         number,
-        isActive: true,
+        isActive: data.isActive !== undefined ? data.isActive : true,
       },
     })
   }
@@ -80,6 +80,24 @@ export class UnitsService {
         ...(data.number ? { number: data.number.trim() } : {}),
         ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
       },
+    })
+  }
+
+  async remove(id: string) {
+    await this.findOne(id)
+
+    const hasPackages = await this.prisma.package.count({ where: { unitId: id } })
+    const hasResidents = await this.prisma.resident.count({ where: { unitId: id } })
+
+    if (hasPackages > 0 || hasResidents > 0) {
+      return this.prisma.unit.update({
+        where: { id },
+        data: { isActive: false },
+      })
+    }
+
+    return this.prisma.unit.delete({
+      where: { id },
     })
   }
 }
