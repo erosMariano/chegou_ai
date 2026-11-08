@@ -12,11 +12,12 @@ interface ResidentQrWidgetProps {
 }
 
 export function ResidentQrWidget({ packageItem }: ResidentQrWidgetProps) {
-  // Format PIN in spaced groups: e.g. 482 • 910
+  // Format PIN in spaced groups: e.g. 482 • 910, or show QR Code indicator
+  const pin = packageItem.pickupPin || ""
   const formattedPin =
-    packageItem.pickupPin.length === 6
-      ? `${packageItem.pickupPin.slice(0, 3)} • ${packageItem.pickupPin.slice(3)}`
-      : packageItem.pickupPin
+    pin && pin.length === 6
+      ? `${pin.slice(0, 3)} • ${pin.slice(3)}`
+      : pin || "Via QR Code"
 
   return (
     <div className="relative overflow-hidden rounded-lg bg-white border border-zinc-200/90 shadow-md max-w-sm mx-auto text-center">

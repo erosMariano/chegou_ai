@@ -66,7 +66,7 @@ export const PackageSchema = z.object({
   recipientNameRaw: z.string(),
   trackingCode: z.string().optional().default(""),
   carrier: z.string().optional().default(""),
-  pickupPin: z.string(),
+  pickupPin: z.string().optional().default(""),
   pickupPinHash: z.string().optional(),
   pickupQrToken: z.string().uuid(),
   status: PackageStatusEnum,
