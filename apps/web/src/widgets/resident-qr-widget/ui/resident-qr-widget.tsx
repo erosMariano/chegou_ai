@@ -1,23 +1,27 @@
 "use client"
 
 import React from "react"
-import { QRCodeSVG } from "qrcode.react"
 import { ShineBorder } from "@/shared/ui/shine-border"
 import { PackageItem } from "@/entities/package/model/types"
 import { StatusBadge } from "@/shared/ui/status-badge"
-import { Truck, ShieldCheck, QrCode } from "lucide-react"
+import { Truck, ShieldCheck, KeyRound, Clock } from "lucide-react"
 
 interface ResidentQrWidgetProps {
   packageItem: PackageItem
 }
 
 export function ResidentQrWidget({ packageItem }: ResidentQrWidgetProps) {
-  // Format PIN in spaced groups: e.g. 482 • 910, or show QR Code indicator
+  // Format PIN in spaced groups: e.g. 482 • 910
   const pin = packageItem.pickupPin || ""
   const formattedPin =
     pin && pin.length === 6
       ? `${pin.slice(0, 3)} • ${pin.slice(3)}`
-      : pin || "Via QR Code"
+      : pin || "------"
+
+  const receivedTime = new Date(packageItem.receivedAt).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 
   return (
     <div className="relative overflow-hidden rounded-lg bg-white border border-zinc-200/90 shadow-md max-w-sm mx-auto text-center">
@@ -29,7 +33,7 @@ export function ResidentQrWidget({ packageItem }: ResidentQrWidgetProps) {
       />
 
       {/* Apple Wallet Style Pass Content */}
-      <div className="relative z-10 p-6 space-y-5">
+      <div className="relative z-10 p-6 space-y-6">
         {/* Pass Top Branding */}
         <div className="flex items-center justify-between pb-3 border-b border-zinc-100">
           <div className="text-left">
@@ -55,42 +59,39 @@ export function ResidentQrWidget({ packageItem }: ResidentQrWidgetProps) {
           </span>
         </div>
 
-        {/* Centered QR Code with High Precision Frame */}
-        <div className="inline-flex flex-col items-center justify-center p-4 bg-zinc-50/80 rounded-lg border border-zinc-200/80 shadow-inner">
-          <QRCodeSVG
-            value={packageItem.pickupQrToken}
-            size={170}
-            level="H"
-            includeMargin={true}
-            className="rounded-lg shadow-2xs bg-white"
-          />
-          <div className="flex items-center gap-1 text-[10px] text-zinc-400 mt-2 font-mono">
-            <QrCode className="size-3 text-zinc-400" />
-            <span>Token: {packageItem.pickupQrToken.slice(0, 8)}...</span>
+        {/* Large Centered PIN Hero Box */}
+        <div className="py-6 px-4 bg-zinc-900 rounded-xl border border-zinc-800 shadow-md space-y-2 text-center">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-800 text-[10px] font-semibold text-zinc-300 border border-zinc-700/60 mx-auto">
+            <KeyRound className="size-3 text-[#E1FF01]" />
+            <span>Código PIN da Portaria</span>
           </div>
-        </div>
 
-        {/* Wallet Notched Divider */}
-        <div className="relative flex items-center justify-center">
-          <div className="w-full border-t border-dashed border-zinc-200" />
-        </div>
-
-        {/* Spaced PIN (482 • 910) */}
-        <div className="space-y-1">
-          <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
-            Código PIN da Portaria
-          </span>
-          <div className="inline-block px-6 py-2 rounded-lg bg-zinc-900 text-white shadow-2xs">
-            <span className="font-mono text-2xl sm:text-3xl font-extrabold tracking-widest text-[#E1FF01]">
+          <div className="py-2">
+            <span className="font-mono text-3xl sm:text-4xl font-extrabold tracking-widest text-[#E1FF01] drop-shadow-xs">
               {formattedPin}
             </span>
+          </div>
+
+          <p className="text-[11px] text-zinc-400">
+            Informe este código ao porteiro para retirar seu pacote
+          </p>
+        </div>
+
+        {/* Details row */}
+        <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-500">
+          <span className="font-mono text-[11px] bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-lg font-medium">
+            {packageItem.trackingCode || "Entrega Local"}
+          </span>
+          <div className="flex items-center gap-1 text-[11px] text-zinc-400">
+            <Clock className="size-3" />
+            <span>Recebido às {receivedTime}</span>
           </div>
         </div>
 
         {/* Footer Guarantee */}
-        <div className="pt-2 text-[11px] text-zinc-500 flex items-center justify-center gap-1.5">
+        <div className="pt-1 text-[11px] text-zinc-500 flex items-center justify-center gap-1.5">
           <ShieldCheck className="size-3.5 text-emerald-600 shrink-0" />
-          <span>Apresente este passe ao porteiro no ato da retirada.</span>
+          <span>Retirada 100% segura com auditoria em tempo real.</span>
         </div>
       </div>
     </div>
