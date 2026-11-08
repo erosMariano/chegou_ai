@@ -5,30 +5,42 @@ import { PrismaService } from "@/prisma/prisma.service"
 export class UnitsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(includeResidents = false) {
     return this.prisma.unit.findMany({
       where: { isActive: true },
       orderBy: [{ block: "asc" }, { number: "asc" }],
-      include: {
-        residents: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-            phone: true,
-            isPrimary: true,
-          },
-        },
-      },
+      include: includeResidents
+        ? {
+            residents: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                isPrimary: true,
+              },
+            },
+          }
+        : undefined,
     })
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, includeResidents = false) {
     const unit = await this.prisma.unit.findUnique({
       where: { id },
-      include: {
-        residents: true,
-      },
+      include: includeResidents
+        ? {
+            residents: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                phone: true,
+                isPrimary: true,
+              },
+            },
+          }
+        : undefined,
     })
 
     if (!unit) {

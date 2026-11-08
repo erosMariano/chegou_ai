@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards } from "@nestjs/common"
+import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from "@nestjs/common"
 import { UnitsService } from "./units.service"
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard"
 import { RolesGuard } from "@/common/guards/roles.guard"
@@ -13,14 +13,19 @@ export class UnitsController {
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.PORTER, UserRole.RESIDENT)
-  async findAll() {
-    return this.unitsService.findAll()
+  async findAll(@Request() req: any) {
+    // LGPD: Moradores recebem apenas a lista de unidades (bloco e número) sem dados pessoais dos condôminos
+    const canViewResidents = req.user?.role === UserRole.ADMIN || req.user?.role === UserRole.PORTER
+    return this.unitsService.findAll(canViewResidents)
   }
 
   @Get(":id")
   @Roles(UserRole.ADMIN, UserRole.PORTER, UserRole.RESIDENT)
-  async findOne(@Param("id") id: string) {
-    return this.unitsService.findOne(id)
+  async findOne(@Param("id") id: string, @Request() req: any) {
+    // Morador só pode ver dados de moradores se a unidade consultada for a sua própria
+    const isOwnUnit = req.user?.role === UserRole.RESIDENT && req.user?.unitId === id
+    const canViewResidents = req.user?.role === UserRole.ADMIN || req.user?.role === UserRole.PORTER || isOwnUnit
+    return this.unitsService.findOne(id, canViewResidents)
   }
 
   @Post()
