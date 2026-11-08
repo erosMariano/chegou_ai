@@ -11,10 +11,16 @@ import { JwtStrategy } from "./jwt.strategy"
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>("JWT_SECRET") || "chegou_ai_super_secret_jwt_key_development_2026",
-        signOptions: { expiresIn: "7d" },
-      }),
+      useFactory: (config: ConfigService) => {
+        const secret = config.get<string>("JWT_SECRET")
+        if (!secret && process.env.NODE_ENV === "production") {
+          throw new Error("FATAL: JWT_SECRET não configurado em ambiente de produção!")
+        }
+        return {
+          secret: secret || "chegou_ai_dev_jwt_secret_not_for_production_min32chars",
+          signOptions: { expiresIn: "24h" }, // Reduzido de 7d para 24h
+        }
+      },
     }),
   ],
   controllers: [AuthController],
@@ -22,4 +28,3 @@ import { JwtStrategy } from "./jwt.strategy"
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
-
