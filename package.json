@@ -1,4 +1,10 @@
 {
+  "name": "chegou-ai",
+  "private": true,
+  "scripts": {
+    "db:clean": "npm --prefix apps/api run db:clean",
+    "db:seed": "npm --prefix apps/api run prisma:seed"
+  },
   "dependencies": {
     "playwright": "^1.65.0"
   }

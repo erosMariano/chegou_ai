@@ -330,7 +330,7 @@ export class AuthService {
     email: string
     password: string
   }) {
-    // Lock distribuído no Redis para prevenir Race Condition / TOCTOU
+    // 1. Lock distribuído no Redis para prevenir Race Condition / TOCTOU
     const lockKey = "lock:setup_initial_admin"
     const acquired = await this.redis.setIfNotExists(lockKey, "locked", 30)
     if (!acquired) {
@@ -338,48 +338,49 @@ export class AuthService {
     }
 
     try {
-      return await this.prisma.$transaction(async (tx) => {
-        const adminCount = await tx.user.count({
-          where: { role: UserRole.ADMIN },
-        })
+      // 2. Validação se já existe algum administrador cadastrado
+      const adminCount = await this.prisma.user.count({
+        where: { role: UserRole.ADMIN },
+      })
 
-        if (adminCount > 0) {
-          throw new ForbiddenException(
-            "O administrador inicial do condomínio já foi configurado. Acesse pelo login."
-          )
-        }
+      if (adminCount > 0) {
+        throw new ForbiddenException(
+          "O administrador inicial do condomínio já foi configurado. Acesse pelo login."
+        )
+      }
 
-        let condo = await tx.condominium.findFirst()
-        if (!condo) {
-          condo = await tx.condominium.create({
-            data: {
-              name: data.condominiumName.trim(),
-              cnpj: data.cnpj?.trim() || null,
-            },
-          })
-        } else {
-          await tx.condominium.update({
-            where: { id: condo.id },
-            data: {
-              name: data.condominiumName.trim(),
-              ...(data.cnpj ? { cnpj: data.cnpj.trim() } : {}),
-            },
-          })
-        }
-
-        const passwordHash = await bcrypt.hash(data.password, 10)
-        const user = await tx.user.create({
+      // 3. Criação ou atualização do condomínio
+      let condo = await this.prisma.condominium.findFirst()
+      if (!condo) {
+        condo = await this.prisma.condominium.create({
           data: {
-            name: data.name.trim(),
-            email: data.email.toLowerCase().trim(),
-            passwordHash,
-            role: UserRole.ADMIN,
-            isActive: true,
+            name: data.condominiumName.trim(),
+            cnpj: data.cnpj?.trim() || null,
           },
         })
+      } else {
+        await this.prisma.condominium.update({
+          where: { id: condo.id },
+          data: {
+            name: data.condominiumName.trim(),
+            ...(data.cnpj ? { cnpj: data.cnpj.trim() } : {}),
+          },
+        })
+      }
 
-        return this.buildUserSession(user)
+      // 4. Criação do primeiro usuário administrador (Síndico)
+      const passwordHash = await bcrypt.hash(data.password, 10)
+      const user = await this.prisma.user.create({
+        data: {
+          name: data.name.trim(),
+          email: data.email.toLowerCase().trim(),
+          passwordHash,
+          role: UserRole.ADMIN,
+          isActive: true,
+        },
       })
+
+      return this.buildUserSession(user)
     } finally {
       await this.redis.del(lockKey)
     }
