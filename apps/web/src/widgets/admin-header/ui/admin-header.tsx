@@ -23,28 +23,16 @@ export function AdminHeader() {
       active: pathname.startsWith("/admin/usuarios"),
     },
     {
-      label: "Unidades",
+      label: "Unidades & Moradores",
       href: "/admin/unidades",
       icon: Building2,
-      active: pathname.startsWith("/admin/unidades"),
-    },
-    {
-      label: "Moradores",
-      href: "/admin/moradores",
-      icon: Users,
-      active: pathname.startsWith("/admin/moradores"),
-    },
-    {
-      label: "Endereços",
-      href: "/admin/enderecos",
-      icon: MapPin,
-      active: pathname.startsWith("/admin/enderecos"),
+      active: pathname.startsWith("/admin/unidades") || pathname.startsWith("/admin/moradores"),
     },
     {
       label: "Configurações",
       href: "/admin/configuracoes",
       icon: Settings,
-      active: pathname.startsWith("/admin/configuracoes"),
+      active: pathname.startsWith("/admin/configuracoes") || pathname.startsWith("/admin/enderecos"),
     },
   ]
 

@@ -49,12 +49,6 @@ export function CondoSettingsWidget() {
     name: "",
     cnpj: "",
     conciergePhone: "",
-    addressStreet: "",
-    addressNumber: "",
-    neighborhood: "",
-    city: "",
-    state: "",
-    zipCode: "",
   })
 
   const [isLoading, setIsLoading] = useState(true)
@@ -71,12 +65,6 @@ export function CondoSettingsWidget() {
             name: data.name || "",
             cnpj: data.cnpj || "",
             conciergePhone: data.conciergePhone || "",
-            addressStreet: data.addressStreet || "",
-            addressNumber: data.addressNumber || "",
-            neighborhood: data.neighborhood || "",
-            city: data.city || "",
-            state: data.state || "",
-            zipCode: data.zipCode || "",
           })
         }
       } catch {
@@ -101,16 +89,10 @@ export function CondoSettingsWidget() {
         name: profile.name.trim(),
         cnpj: profile.cnpj?.trim() || null,
         conciergePhone: profile.conciergePhone?.trim() || null,
-        addressStreet: profile.addressStreet?.trim() || null,
-        addressNumber: profile.addressNumber?.trim() || null,
-        neighborhood: profile.neighborhood?.trim() || null,
-        city: profile.city?.trim() || null,
-        state: profile.state?.trim() || null,
-        zipCode: profile.zipCode?.trim() || null,
       })
       setProfile((prev) => ({ ...prev, ...updated }))
-      toast.success("Configurações do condomínio salvas com sucesso!", {
-        description: "Os dados foram atualizados e sincronizados com a IA.",
+      toast.success("Dados do condomínio salvos com sucesso!", {
+        description: "Os dados foram atualizados e sincronizados com a portaria.",
       })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro ao salvar dados"
@@ -278,113 +260,6 @@ export function CondoSettingsWidget() {
             </div>
           </div>
 
-          {/* Endereço Físico */}
-          <div className="pt-4 border-t border-zinc-100 space-y-4">
-            <div className="flex items-center gap-2">
-              <MapPin className="size-4 text-zinc-600" />
-              <h4 className="text-sm font-extrabold text-zinc-950">
-                Endereço Físico para Cruzamento com Etiquetas (IA)
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              <div className="sm:col-span-3 space-y-1.5">
-                <Label htmlFor="street" className="text-xs font-bold text-zinc-700">
-                  Logradouro (Rua, Avenida, Alameda)
-                </Label>
-                <Input
-                  id="street"
-                  value={profile.addressStreet || ""}
-                  onChange={(e) =>
-                    setProfile((p) => ({ ...p, addressStreet: e.target.value }))
-                  }
-                  placeholder="Ex: Avenida Paulista"
-                  className="h-10 rounded-xl border-zinc-200"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="number" className="text-xs font-bold text-zinc-700">
-                  Número
-                </Label>
-                <Input
-                  id="number"
-                  value={profile.addressNumber || ""}
-                  onChange={(e) =>
-                    setProfile((p) => ({ ...p, addressNumber: e.target.value }))
-                  }
-                  placeholder="1000"
-                  className="h-10 rounded-xl border-zinc-200"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="neighborhood" className="text-xs font-bold text-zinc-700">
-                  Bairro
-                </Label>
-                <Input
-                  id="neighborhood"
-                  value={profile.neighborhood || ""}
-                  onChange={(e) =>
-                    setProfile((p) => ({ ...p, neighborhood: e.target.value }))
-                  }
-                  placeholder="Ex: Bela Vista"
-                  className="h-10 rounded-xl border-zinc-200"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="city" className="text-xs font-bold text-zinc-700">
-                  Cidade
-                </Label>
-                <Input
-                  id="city"
-                  value={profile.city || ""}
-                  onChange={(e) =>
-                    setProfile((p) => ({ ...p, city: e.target.value }))
-                  }
-                  placeholder="São Paulo"
-                  className="h-10 rounded-xl border-zinc-200"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="state" className="text-xs font-bold text-zinc-700">
-                    UF
-                  </Label>
-                  <Input
-                    id="state"
-                    value={profile.state || ""}
-                    onChange={(e) =>
-                      setProfile((p) => ({ ...p, state: e.target.value.toUpperCase().slice(0, 2) }))
-                    }
-                    placeholder="SP"
-                    maxLength={2}
-                    className="h-10 rounded-xl border-zinc-200 text-center font-bold"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="zipCode" className="text-xs font-bold text-zinc-700">
-                    CEP
-                  </Label>
-                  <Input
-                    id="zipCode"
-                    value={profile.zipCode || ""}
-                    onChange={(e) =>
-                      setProfile((p) => ({ ...p, zipCode: formatCepInput(e.target.value) }))
-                    }
-                    placeholder="01311-000"
-                    className="h-10 rounded-xl border-zinc-200 font-mono text-center"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div className="pt-6 border-t border-zinc-100 flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs text-zinc-500">
               <ShieldCheck className="size-4 text-emerald-600" />
@@ -397,7 +272,7 @@ export function CondoSettingsWidget() {
               className="rounded-xl bg-zinc-900 hover:bg-black text-white font-bold text-xs h-10 px-6 gap-2 shadow-xs"
             >
               <Save className="size-4 text-[#E1FF01]" />
-              <span>{isSaving ? "Salvando..." : "Salvar Configurações"}</span>
+              <span>{isSaving ? "Salvando..." : "Salvar Dados do Condomínio"}</span>
             </Button>
           </div>
         </form>
