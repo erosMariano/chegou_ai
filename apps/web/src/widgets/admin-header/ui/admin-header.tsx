@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ShieldCheck, Building2, Users, MapPin, FileText, Settings, ArrowLeft } from "lucide-react"
+import { ShieldCheck, Building2, Users, MapPin, UserCheck, Settings, ArrowLeft } from "lucide-react"
 import { cn } from "@/shared/lib/utils"
 
 export function AdminHeader() {
@@ -15,6 +15,12 @@ export function AdminHeader() {
       href: "/admin",
       icon: ShieldCheck,
       active: pathname === "/admin",
+    },
+    {
+      label: "Operadores",
+      href: "/admin/usuarios",
+      icon: UserCheck,
+      active: pathname.startsWith("/admin/usuarios"),
     },
     {
       label: "Unidades",
@@ -33,6 +39,12 @@ export function AdminHeader() {
       href: "/admin/enderecos",
       icon: MapPin,
       active: pathname.startsWith("/admin/enderecos"),
+    },
+    {
+      label: "Configurações",
+      href: "/admin/configuracoes",
+      icon: Settings,
+      active: pathname.startsWith("/admin/configuracoes"),
     },
   ]
 
