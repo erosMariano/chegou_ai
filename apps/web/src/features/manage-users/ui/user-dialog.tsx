@@ -29,6 +29,11 @@ import {
 import { toast } from "sonner"
 import { KeyRound, Copy, Check, ShieldCheck, UserCheck } from "lucide-react"
 
+const ROLE_LABELS: Record<string, string> = {
+  PORTER: "Porteiro (Operação da Portaria)",
+  ADMIN: "Síndico / Administrador Geral",
+}
+
 interface UserDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -179,20 +184,29 @@ export function UserDialog({
               }}
             >
               <SelectTrigger className="h-10 rounded-xl border-zinc-200 bg-zinc-50/50 text-xs font-bold text-zinc-800">
-                <SelectValue placeholder="Selecione o perfil" />
+                <SelectValue placeholder="Selecione o perfil">
+                  {(val: unknown) => {
+                    const roleKey = (typeof val === "string" ? val : currentRole) as string
+                    return ROLE_LABELS[roleKey] || (roleKey === "PORTER" ? "Porteiro" : roleKey)
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 <SelectItem value="PORTER">
-                  <span className="font-semibold text-zinc-900">Porteiro (Operação da Portaria)</span>
-                  <p className="text-[10px] text-zinc-500">
-                    Acesso a check-in com IA, check-out por PIN e lista de pacotes
-                  </p>
+                  <div className="flex flex-col text-left py-0.5">
+                    <span className="font-semibold text-zinc-900">Porteiro (Operação da Portaria)</span>
+                    <span className="text-[10px] text-zinc-500 font-normal">
+                      Acesso a check-in com IA, check-out por PIN e lista de pacotes
+                    </span>
+                  </div>
                 </SelectItem>
                 <SelectItem value="ADMIN">
-                  <span className="font-semibold text-zinc-900">Síndico / Administrador Geral</span>
-                  <p className="text-[10px] text-zinc-500">
-                    Acesso a cadastros, equipe, auditoria e métricas
-                  </p>
+                  <div className="flex flex-col text-left py-0.5">
+                    <span className="font-semibold text-zinc-900">Síndico / Administrador Geral</span>
+                    <span className="text-[10px] text-zinc-500 font-normal">
+                      Acesso a cadastros, equipe, auditoria e métricas
+                    </span>
+                  </div>
                 </SelectItem>
               </SelectContent>
             </Select>

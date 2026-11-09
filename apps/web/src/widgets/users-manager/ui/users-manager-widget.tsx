@@ -21,6 +21,17 @@ import {
   KeyRound,
 } from "lucide-react"
 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/shared/ui/alert-dialog"
+
 interface UsersManagerWidgetProps {
   initialUsers: UserOperator[]
 }
@@ -32,6 +43,14 @@ export function UsersManagerWidget({ initialUsers }: UsersManagerWidgetProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<UserOperator | null>(null)
   const [isTogglingId, setIsTogglingId] = useState<string | null>(null)
+  const [confirmUserDialog, setConfirmUserDialog] = useState<{
+    isOpen: boolean
+    title: string
+    description: string
+    confirmLabel?: string
+    isDestructive?: boolean
+    onConfirm: () => void
+  } | null>(null)
 
   // Filtros em memória
   const filteredUsers = users.filter((u) => {
@@ -85,29 +104,30 @@ export function UsersManagerWidget({ initialUsers }: UsersManagerWidgetProps) {
     }
   }
 
-  async function handleDelete(user: UserOperator) {
-    if (
-      !confirm(
-        `Tem certeza que deseja remover ${user.name}? Se houver histórico de pacotes, ele será inativado.`
-      )
-    ) {
-      return
-    }
-
-    try {
-      const res = await userPort.deleteUser(user.id)
-      if (res.deleted) {
-        setUsers((prev) => prev.filter((u) => u.id !== user.id))
-      } else if (res.inactivated) {
-        setUsers((prev) =>
-          prev.map((u) => (u.id === user.id ? { ...u, isActive: false } : u))
-        )
-      }
-      toast.success(res.message)
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao remover operador"
-      toast.error(msg)
-    }
+  function handleDelete(user: UserOperator) {
+    setConfirmUserDialog({
+      isOpen: true,
+      title: "Remover Operador?",
+      description: `Tem certeza que deseja remover ${user.name}? Se houver histórico de pacotes registrados por ele, o acesso será inativado para preservar a integridade da auditoria.`,
+      confirmLabel: "Remover Operador",
+      isDestructive: true,
+      onConfirm: async () => {
+        try {
+          const res = await userPort.deleteUser(user.id)
+          if (res.deleted) {
+            setUsers((prev) => prev.filter((u) => u.id !== user.id))
+          } else if (res.inactivated) {
+            setUsers((prev) =>
+              prev.map((u) => (u.id === user.id ? { ...u, isActive: false } : u))
+            )
+          }
+          toast.success(res.message)
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "Erro ao remover operador"
+          toast.error(msg)
+        }
+      },
+    })
   }
 
   return (
@@ -363,6 +383,43 @@ export function UsersManagerWidget({ initialUsers }: UsersManagerWidgetProps) {
         onSuccess={() => {}}
         onSaveUser={handleSaveUser}
       />
+
+      {/* Alert Dialog de Confirmação (shadcn) */}
+      <AlertDialog
+        open={!!confirmUserDialog?.isOpen}
+        onOpenChange={(open) => {
+          if (!open) setConfirmUserDialog(null)
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-extrabold text-zinc-950">
+              {confirmUserDialog?.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-zinc-500">
+              {confirmUserDialog?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-3 border-t border-zinc-100 flex flex-col-reverse sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => setConfirmUserDialog(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                confirmUserDialog?.onConfirm()
+                setConfirmUserDialog(null)
+              }}
+              className={
+                confirmUserDialog?.isDestructive
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-zinc-900 hover:bg-black text-white"
+              }
+            >
+              {confirmUserDialog?.confirmLabel || "Confirmar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
