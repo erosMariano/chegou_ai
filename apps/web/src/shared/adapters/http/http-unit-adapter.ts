@@ -60,5 +60,17 @@ export class HttpUnitAdapter implements UnitPort {
   async deleteResident(id: string): Promise<void> {
     return httpDelete(`/residents/${id}`)
   }
+
+  async generateResidentInvite(residentId: string): Promise<{ token: string; inviteUrl: string }> {
+    return httpPost<{ token: string; inviteUrl: string }>(`/residents/${residentId}/invite`, {})
+  }
+
+  async importUnitsBatch(items: Array<{ block?: string; number: string }>): Promise<{ totalReceived: number; created: number; skipped: number }> {
+    return httpPost<{ totalReceived: number; created: number; skipped: number }>("/units/import-batch", { items })
+  }
+
+  async importResidentsBatch(items: Array<{ block?: string; number: string; fullName: string; email: string; phone?: string; isPrimary?: boolean }>): Promise<{ totalReceived: number; created: number; errors: string[] }> {
+    return httpPost<{ totalReceived: number; created: number; errors: string[] }>("/residents/import-batch", { items })
+  }
 }
 

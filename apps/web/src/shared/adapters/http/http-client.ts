@@ -163,7 +163,7 @@ export async function httpPatch<T>(endpoint: string, body?: unknown): Promise<T>
   }
 }
 
-export async function httpDelete(endpoint: string): Promise<void> {
+export async function httpDelete<T = any>(endpoint: string): Promise<T> {
   const baseUrl = getApiBaseUrl()
   const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
 
@@ -177,6 +177,8 @@ export async function httpDelete(endpoint: string): Promise<void> {
       const err = await res.json().catch(() => ({}))
       throw new Error(err.detail || err.message || `Erro ${res.status} ao excluir em ${endpoint}`)
     }
+
+    return await res.json().catch(() => ({} as T))
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Falha ao conectar com o backend"
     throw new Error(msg)

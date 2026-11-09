@@ -104,6 +104,70 @@ class MockUnitAdapterImpl implements UnitPort {
     this.residents = this.residents.filter((r) => r.id !== id)
   }
 
+  async generateResidentInvite(residentId: string): Promise<{ token: string; inviteUrl: string }> {
+    const resident = this.residents.find((r) => r.id === residentId)
+    const token = generateUUID()
+    return {
+      token,
+      inviteUrl: `/ativar-conta?token=${token}&email=${encodeURIComponent(resident?.email || "")}`,
+    }
+  }
+
+  async importUnitsBatch(items: Array<{ block?: string; number: string }>): Promise<{ totalReceived: number; created: number; skipped: number }> {
+    let created = 0
+    let skipped = 0
+    for (const item of items) {
+      const block = (item.block || "UNICO").toUpperCase().trim()
+      const number = item.number.trim()
+      const exists = this.units.some((u) => u.block === block && u.number === number)
+      if (exists) {
+        skipped++
+      } else {
+        this.units.push({
+          id: generateUUID(),
+          block,
+          number,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        })
+        created++
+      }
+    }
+    return { totalReceived: items.length, created, skipped }
+  }
+
+  async importResidentsBatch(items: Array<{ block?: string; number: string; fullName: string; email: string; phone?: string; isPrimary?: boolean }>): Promise<{ totalReceived: number; created: number; errors: string[] }> {
+    let created = 0
+    const errors: string[] = []
+    for (const item of items) {
+      const block = (item.block || "UNICO").toUpperCase().trim()
+      const number = item.number.trim()
+      let unit = this.units.find((u) => u.block === block && u.number === number)
+      if (!unit) {
+        unit = {
+          id: generateUUID(),
+          block,
+          number,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        }
+        this.units.push(unit)
+      }
+      this.residents.push({
+        id: generateUUID(),
+        unitId: unit.id,
+        fullName: item.fullName.trim(),
+        email: item.email.toLowerCase().trim(),
+        phone: item.phone?.trim(),
+        documentLast4: "0000",
+        isPrimary: item.isPrimary || false,
+        createdAt: new Date().toISOString(),
+      })
+      created++
+    }
+    return { totalReceived: items.length, created, errors }
+  }
+
   resetData(): void {
     this.units = [...MOCK_UNITS]
     this.residents = [...MOCK_RESIDENTS]

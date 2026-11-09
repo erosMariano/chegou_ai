@@ -22,4 +22,9 @@ export interface UnitPort {
   createResident(data: CreateResidentInput): Promise<Resident>
   updateResident(id: string, data: UpdateResidentInput): Promise<Resident>
   deleteResident(id: string): Promise<void>
+  generateResidentInvite(residentId: string): Promise<{ token: string; inviteUrl: string }>
+
+  // Importação em Lote
+  importUnitsBatch(items: Array<{ block?: string; number: string }>): Promise<{ totalReceived: number; created: number; skipped: number }>
+  importResidentsBatch(items: Array<{ block?: string; number: string; fullName: string; email: string; phone?: string; isPrimary?: boolean }>): Promise<{ totalReceived: number; created: number; errors: string[] }>
 }

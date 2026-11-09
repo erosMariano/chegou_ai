@@ -6,7 +6,7 @@ import {
   ExtractLabelResponse,
   PackageEvent,
 } from "@/entities/package/model/types"
-import { httpGet, httpPost } from "./http-client"
+import { httpGet, httpPost, httpPatch } from "./http-client"
 
 /**
  * HttpPackageAdapter
@@ -51,6 +51,10 @@ export class HttpPackageAdapter implements PackagePort {
 
   async extractLabel(image?: string, mimeType?: string): Promise<ExtractLabelResponse> {
     return httpPost<ExtractLabelResponse>("/bff/packages/extract-label", { image, mimeType })
+  }
+
+  async cancelPackage(id: string, reason?: string, notes?: string): Promise<PackageItem> {
+    return httpPatch<PackageItem>(`/packages/${id}/cancel`, { reason, notes })
   }
 
   async listEvents(): Promise<PackageEvent[]> {

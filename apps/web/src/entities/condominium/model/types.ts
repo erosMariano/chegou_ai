@@ -28,3 +28,18 @@ export interface CreateCondominiumAddressInput {
 
 export type UpdateCondominiumAddressInput = Partial<CreateCondominiumAddressInput>
 
+export interface CondominiumProfile {
+  id: string
+  name: string
+  cnpj?: string | null
+  addressStreet?: string | null
+  addressNumber?: string | null
+  neighborhood?: string | null
+  city?: string | null
+  state?: string | null
+  zipCode?: string | null
+  conciergePhone?: string | null
+}
+
+export type UpdateCondominiumProfileInput = Partial<Omit<CondominiumProfile, "id">>
+

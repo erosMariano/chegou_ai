@@ -165,6 +165,24 @@ class MockPackageAdapterImpl implements PackagePort {
     }
   }
 
+  async cancelPackage(id: string, reason?: string, notes?: string): Promise<PackageItem> {
+    const pkg = this.packages.find((p) => p.id === id)
+    if (!pkg) {
+      throw new Error("Encomenda não encontrada.")
+    }
+    pkg.status = "CANCELLED"
+    pkg.version += 1
+    this.events.unshift({
+      id: generateUUID(),
+      packageId: id,
+      actorName: "Porteiro em Turno",
+      eventType: "CANCELLED",
+      metadata: { reason: reason || "DEVOLUCAO_TRANSPORTADORA", notes },
+      createdAt: new Date().toISOString(),
+    })
+    return { ...pkg }
+  }
+
   async listEvents(): Promise<PackageEvent[]> {
     return [...this.events].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
