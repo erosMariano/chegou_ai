@@ -2,7 +2,7 @@
 
 **Stack:** Next.js (front), NestJS (back), PostgreSQL, Redis.  
 **Auditor:** AppSec Senior Engineer  
-**Status Atual:** CONCLUÍDO (Convergência com 2 iterações consecutivas sem achados)
+**Status Atual:** CONCLUÍDO (Convergência com 2 iterações consecutivas sem achados críticos pendentes)
 
 ---
 
@@ -20,6 +20,9 @@
 | **SEC-008** | Médio | `apps/api/src/modules/packages/packages.service.ts:159` | Invalidação estrita de PIN e QR passes após cancelamento/devolução | corrigido | `3b15dce` |
 | **SEC-009** | Médio | `apps/api/Dockerfile:16` | Containers Docker executando com usuário root em estágio runner | corrigido | `2ff0a5f` |
 | **SEC-010** | Baixo | `docker-compose.prod.yml:8` | Senhas padrão com fallback fraco em compose de produção | corrigido | `a38f034` |
+| **SEC-011** | Médio | `apps/api/src/modules/auth/auth.service.ts:333` | Race condition (TOCTOU) no setup do 1º administrador inicial | corrigido | `pendente-commit` |
+| **SEC-012** | Baixo | `apps/api/src/main.ts:80` | Exposição irrestrita do Swagger UI em produção sem flag de controle | corrigido | `pendente-commit` |
+| **SEC-013** | Baixo | `apps/api/src/modules/auth/dto/auth-requests.dto.ts:45` | Ausência de `@IsOptional()` e `@MaxLength()` em DTO de setup inicial | corrigido | `pendente-commit` |
 
 ---
 
@@ -27,6 +30,7 @@
 
 - **FP-001:** `npm audit` acusa `zod can exhaust memory while validating...` — Zod é utilizado para parsing de schemas conhecidos e sanitizados de API interna e formulários controlados, não para regex arbitrária de usuário final sem limite. Risco aceito na versão atual de dependências.
 - **FP-002:** `npm audit` acusa `@angular-devkit/schematics` / `glob` no `@nestjs/cli` — Trata-se de dependência de build/desenvolvimento (`devDependencies`), não incluída no runtime de produção do container NestJS.
+- **FP-003:** `npm audit` sugere atualização para NestJS v12 (`breaking change`) para pacotes do ecossistema NestJS (body-parser/multer). Mantido NestJS v10 com validação por Pipes e Helmet hardening ativo.
 
 ---
 
@@ -38,3 +42,4 @@
 - **Iteração 3 (Infraestrutura & Containers):** 2 achados mapeados (1 Médio, 1 Baixo) e 100% corrigidos.
 - **Iteração 4 (Lente Par: Negócio & Autorização):** 0 achados novos.
 - **Iteração 5 (Lente Ímpar: Injeção & Infra):** 0 achados novos (Convergência confirmada).
+- **Iteração 6 (Auditoria das Novas Rotas & Swagger):** 3 achados mapeados (1 Médio, 2 Baixo) e 100% mitigados com Distributed Lock no Redis, controle de ambiente no Swagger e validação estrita em DTOs.
