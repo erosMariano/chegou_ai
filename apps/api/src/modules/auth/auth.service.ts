@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException, NotFoundException, BadRequestException } from "@nestjs/common"
+import {
+  Injectable,
+  UnauthorizedException,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from "@nestjs/common"
 import { JwtService } from "@nestjs/jwt"
 import { PrismaService } from "@/prisma/prisma.service"
 import { RedisService } from "@/common/redis/redis.service"
@@ -170,11 +176,23 @@ export class AuthService {
     }
   }
 
-  async activateAccount(email: string, pass: string) {
+  async activateAccount(email: string, token: string, pass: string) {
     const normalizedEmail = (email || "").toLowerCase().trim()
+    const cleanToken = (token || "").trim()
+
+    if (!cleanToken) {
+      throw new BadRequestException("Token de ativação é obrigatório.")
+    }
+
     let user = await this.prisma.user.findUnique({
       where: { email: normalizedEmail },
     })
+
+    if (user && user.isActive) {
+      throw new ConflictException(
+        "Esta conta já se encontra ativa. Acesse pelo login ou utilize a recuperação de senha."
+      )
+    }
 
     const resident = await this.prisma.resident.findFirst({
       where: { email: normalizedEmail },
@@ -182,6 +200,14 @@ export class AuthService {
 
     if (!resident) {
       throw new NotFoundException("Cadastro de morador não encontrado para este e-mail.")
+    }
+
+    // Validação estrita do token de convite no Redis
+    const storedToken = await this.redis.get(`auth:invite_token:${normalizedEmail}`)
+    if (!storedToken || storedToken !== cleanToken) {
+      throw new UnauthorizedException(
+        "Token de ativação inválido ou expirado. Solicite um novo convite à administração do condomínio."
+      )
     }
 
     const passwordHash = await bcrypt.hash(pass, 10)
@@ -203,6 +229,9 @@ export class AuthService {
         },
       })
     }
+
+    // Invalidação imediata do token de convite após ativação com sucesso
+    await this.redis.del(`auth:invite_token:${normalizedEmail}`)
 
     return this.buildUserSession(user)
   }

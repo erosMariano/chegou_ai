@@ -42,7 +42,7 @@ export class AuthController {
   @Post("activate")
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async activateAccount(@Body() body: ActivateAccountDto) {
-    return this.authService.activateAccount(body.email, body.password)
+    return this.authService.activateAccount(body.email, body.token, body.password)
   }
 
   @Post("forgot-password")

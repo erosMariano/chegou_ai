@@ -17,6 +17,7 @@ function ActivateAccountContent() {
   const tokenParam = searchParams.get("token") || ""
 
   const [email, setEmail] = useState(emailParam)
+  const [token, setToken] = useState(tokenParam)
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -24,13 +25,19 @@ function ActivateAccountContent() {
 
   useEffect(() => {
     if (emailParam) setEmail(emailParam)
-  }, [emailParam])
+    if (tokenParam) setToken(tokenParam)
+  }, [emailParam, tokenParam])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
     if (!email.trim()) {
       toast.error("Informe seu e-mail cadastrado.")
+      return
+    }
+
+    if (!token.trim()) {
+      toast.error("Token de ativação ausente. Utilize o link recebido no convite.")
       return
     }
 
@@ -50,7 +57,11 @@ function ActivateAccountContent() {
       const res = await fetch(`${baseUrl}/auth/activate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          token: token.trim(),
+          password,
+        }),
       })
 
       if (!res.ok) {
@@ -122,6 +133,21 @@ function ActivateAccountContent() {
                     placeholder="exemplo@gmail.com"
                     required
                     className="h-11 rounded-xl border-zinc-200 bg-zinc-50/50 text-xs sm:text-sm focus-visible:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="token" className="text-xs font-bold text-zinc-700">
+                    Código / Token do Convite
+                  </Label>
+                  <Input
+                    id="token"
+                    type="text"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    placeholder="Cole o token do convite recebido"
+                    required
+                    className="h-11 rounded-xl border-zinc-200 bg-zinc-50/50 font-mono text-xs sm:text-sm focus-visible:bg-white"
                   />
                 </div>
 

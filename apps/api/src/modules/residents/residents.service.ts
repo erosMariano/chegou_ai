@@ -1,14 +1,19 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from "@nestjs/common"
 import { PrismaService } from "@/prisma/prisma.service"
+import { RedisService } from "@/common/redis/redis.service"
 import { UserRole } from "@prisma/client"
 import * as bcrypt from "bcryptjs"
+import { randomBytes } from "crypto"
 import { CreateResidentDto } from "./dto/create-resident.dto"
 
 export { CreateResidentDto }
 
 @Injectable()
 export class ResidentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService
+  ) {}
 
   async findAll(unitId?: string) {
     const where = unitId ? { unitId } : {}
@@ -305,8 +310,10 @@ export class ResidentsService {
 
   async generateInvite(residentId: string) {
     const resident = await this.findOne(residentId)
-    const token = Buffer.from(`${resident.id}:${Date.now()}:${Math.random().toString(36).slice(2)}`).toString("base64url")
-    const inviteUrl = `/ativar-conta?token=${token}&email=${encodeURIComponent(resident.email)}`
+    const token = randomBytes(32).toString("hex")
+    const normalizedEmail = resident.email.toLowerCase().trim()
+    await this.redis.set(`auth:invite_token:${normalizedEmail}`, token, 604800) // 7 dias de validade
+    const inviteUrl = `/ativar-conta?token=${token}&email=${encodeURIComponent(normalizedEmail)}`
     return {
       token,
       inviteUrl,

@@ -5,6 +5,10 @@ export class ActivateAccountDto {
   @IsNotEmpty({ message: "O e-mail é obrigatório." })
   email: string
 
+  @IsString({ message: "Token de ativação inválido." })
+  @IsNotEmpty({ message: "O token de ativação é obrigatório." })
+  token: string
+
   @IsString({ message: "A senha deve ser uma cadeia de caracteres." })
   @MinLength(6, { message: "A nova senha deve ter no mínimo 6 caracteres." })
   password: string
