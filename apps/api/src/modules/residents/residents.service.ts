@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from "@nestjs/common"
+import { Injectable, NotFoundException, BadRequestException, ConflictException, Logger } from "@nestjs/common"
+import { ConfigService } from "@nestjs/config"
 import { PrismaService } from "@/prisma/prisma.service"
 import { RedisService } from "@/common/redis/redis.service"
+import { MailService } from "@/common/mail/mail.service"
 import { UserRole } from "@prisma/client"
 import * as bcrypt from "bcryptjs"
 import { randomBytes } from "crypto"
@@ -10,9 +12,13 @@ export { CreateResidentDto }
 
 @Injectable()
 export class ResidentsService {
+  private readonly logger = new Logger(ResidentsService.name)
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly redis: RedisService
+    private readonly redis: RedisService,
+    private readonly config: ConfigService,
+    private readonly mailService: MailService
   ) {}
 
   async findAll(unitId?: string) {
@@ -82,24 +88,30 @@ export class ResidentsService {
       },
     })
 
-    // Sincroniza usuário operacional para o morador poder logar
-    const defaultPasswordHash = await bcrypt.hash("123456", 10)
+    // Inicializa conta de usuário associada com status pendente de ativação (isActive: false)
+    const initialPlaceholderHash = await bcrypt.hash(randomBytes(16).toString("hex"), 10)
     await this.prisma.user.upsert({
       where: { email: resident.email },
       update: {
         name: resident.fullName,
         unitId: resident.unitId,
-        isActive: true,
       },
       create: {
         name: resident.fullName,
         email: resident.email,
-        passwordHash: defaultPasswordHash,
+        passwordHash: initialPlaceholderHash,
         role: UserRole.RESIDENT,
         unitId: resident.unitId,
-        isActive: true,
+        isActive: false,
       },
     })
+
+    // Dispara automaticamente convite e e-mail via Resend para ativação da conta
+    try {
+      await this.generateInvite(resident.id, true)
+    } catch (err: any) {
+      this.logger.warn(`Não foi possível enviar e-mail de convite no cadastro do morador: ${err.message}`)
+    }
 
     return resident
   }
@@ -308,12 +320,36 @@ export class ResidentsService {
     return "bloco,numero,nome_completo,email,telefone,principal\nB,402,Mariana Costa Silva,mariana@exemplo.com,(11) 98765-4321,sim\nA,101,João da Silva,joao@exemplo.com,(11) 91234-5678,nao\n"
   }
 
-  async generateInvite(residentId: string) {
+  async generateInvite(residentId: string, sendEmail = true) {
     const resident = await this.findOne(residentId)
     const token = randomBytes(32).toString("hex")
     const normalizedEmail = resident.email.toLowerCase().trim()
     await this.redis.set(`auth:invite_token:${normalizedEmail}`, token, 604800) // 7 dias de validade
-    const inviteUrl = `/ativar-conta?token=${token}&email=${encodeURIComponent(normalizedEmail)}`
+
+    const appUrl =
+      this.config.get<string>("FRONTEND_URL") ||
+      this.config.get<string>("NEXT_PUBLIC_APP_URL") ||
+      "http://localhost:3000"
+    const cleanAppUrl = appUrl.trim().replace(/\/+$/, "")
+    const inviteUrl = `${cleanAppUrl}/ativar-conta?token=${token}&email=${encodeURIComponent(normalizedEmail)}`
+
+    if (sendEmail) {
+      const unitInfo = resident.unit
+        ? `Bloco ${resident.unit.block} - Apto ${resident.unit.number}`
+        : "Condomínio"
+
+      this.mailService
+        .sendResidentInviteEmail({
+          to: resident.email,
+          residentName: resident.fullName,
+          unitInfo,
+          inviteUrl,
+        })
+        .catch((err) => {
+          this.logger.error(`Falha ao despachar e-mail via Resend: ${err.message}`)
+        })
+    }
+
     return {
       token,
       inviteUrl,
