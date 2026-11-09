@@ -2,6 +2,20 @@ import { Injectable } from "@nestjs/common"
 import { PrismaService } from "@/prisma/prisma.service"
 import { PackageStatus } from "@prisma/client"
 
+function sanitizeCsvCell(value: unknown): string {
+  if (value === null || value === undefined) return '""'
+  let str = String(value).trim()
+
+  // Prevenção contra CSV / Formula Injection (DDE, Hyperlink e fórmulas maliciosas)
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`
+  }
+
+  // RFC 4180: Escapar aspas duplas internas duplicando-as (" -> "")
+  const escaped = str.replace(/"/g, '""')
+  return `"${escaped}"`
+}
+
 @Injectable()
 export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
@@ -115,7 +129,16 @@ export class AuditService {
         const unidade = e.package ? `${e.package.unit.block}-${e.package.unit.number}` : "-"
         const carrier = e.package?.carrier || "-"
         const tracking = e.package?.trackingCode || "-"
-        return `"${dataStr}","${horaStr}","${e.eventType}","${operador}","${dest}","${unidade}","${carrier}","${tracking}"`
+        return [
+          sanitizeCsvCell(dataStr),
+          sanitizeCsvCell(horaStr),
+          sanitizeCsvCell(e.eventType),
+          sanitizeCsvCell(operador),
+          sanitizeCsvCell(dest),
+          sanitizeCsvCell(unidade),
+          sanitizeCsvCell(carrier),
+          sanitizeCsvCell(tracking),
+        ].join(",")
       })
       .join("\n")
 
