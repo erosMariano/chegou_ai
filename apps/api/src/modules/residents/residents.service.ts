@@ -222,5 +222,101 @@ export class ResidentsService {
       })),
     }
   }
+
+  async importBatch(items: Array<{
+    block?: string
+    number: string
+    fullName: string
+    email: string
+    phone?: string
+    isPrimary?: boolean
+  }>) {
+    if (!Array.isArray(items) || items.length === 0) {
+      return { totalReceived: 0, created: 0, errors: [] }
+    }
+
+    const units = await this.prisma.unit.findMany({ where: { isActive: true } })
+    const unitMap = new Map<string, string>()
+    for (const u of units) {
+      unitMap.set(`${u.block.toUpperCase().trim()}:${u.number.trim()}`, u.id)
+    }
+
+    let created = 0
+    const errors: string[] = []
+
+    for (let index = 0; index < items.length; index++) {
+      const row = items[index]
+      const block = (row.block || "UNICO").toUpperCase().trim()
+      const number = (row.number || "").trim()
+      const key = `${block}:${number}`
+
+      let targetUnitId = unitMap.get(key)
+      if (!targetUnitId) {
+        try {
+          const newUnit = await this.prisma.unit.create({
+            data: { block, number, isActive: true },
+          })
+          targetUnitId = newUnit.id
+          unitMap.set(key, targetUnitId)
+        } catch {
+          targetUnitId = unitMap.get(key)
+        }
+      }
+
+      if (!targetUnitId) {
+        errors.push(`Linha ${index + 1}: Unidade ${block}-${number} inválida`)
+        continue
+      }
+
+      const email = (row.email || "").toLowerCase().trim()
+      const fullName = (row.fullName || "").trim()
+
+      if (!email || !fullName) {
+        errors.push(`Linha ${index + 1}: Nome e e-mail são obrigatórios`)
+        continue
+      }
+
+      try {
+        await this.prisma.resident.create({
+          data: {
+            unitId: targetUnitId,
+            fullName,
+            email,
+            phone: row.phone?.trim() || null,
+            isPrimary: row.isPrimary || false,
+          },
+        })
+        created++
+      } catch (err: any) {
+        errors.push(`Linha ${index + 1} (${fullName}): ${err.message}`)
+      }
+    }
+
+    return {
+      totalReceived: items.length,
+      created,
+      errors,
+    }
+  }
+
+  getTemplateCsv() {
+    return "bloco,numero,nome_completo,email,telefone,principal\nB,402,Mariana Costa Silva,mariana@exemplo.com,(11) 98765-4321,sim\nA,101,João da Silva,joao@exemplo.com,(11) 91234-5678,nao\n"
+  }
+
+  async generateInvite(residentId: string) {
+    const resident = await this.findOne(residentId)
+    const token = Buffer.from(`${resident.id}:${Date.now()}:${Math.random().toString(36).slice(2)}`).toString("base64url")
+    const inviteUrl = `/ativar-conta?token=${token}&email=${encodeURIComponent(resident.email)}`
+    return {
+      token,
+      inviteUrl,
+      resident: {
+        id: resident.id,
+        fullName: resident.fullName,
+        email: resident.email,
+        unit: resident.unit,
+      },
+    }
+  }
 }
 

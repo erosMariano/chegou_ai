@@ -84,4 +84,34 @@ export class ResidentsController {
   async delete(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.residentsService.delete(id)
   }
+
+  @Post("import-batch")
+  @Roles(UserRole.ADMIN)
+  async importBatch(
+    @Body()
+    body: {
+      items: Array<{
+        block?: string
+        number: string
+        fullName: string
+        email: string
+        phone?: string
+        isPrimary?: boolean
+      }>
+    }
+  ) {
+    return this.residentsService.importBatch(body?.items || [])
+  }
+
+  @Get("template-csv")
+  @Roles(UserRole.ADMIN)
+  async getTemplateCsv() {
+    return { csv: this.residentsService.getTemplateCsv() }
+  }
+
+  @Post(":id/invite")
+  @Roles(UserRole.ADMIN)
+  async generateInvite(@Param("id", new ParseUUIDPipe()) id: string) {
+    return this.residentsService.generateInvite(id)
+  }
 }

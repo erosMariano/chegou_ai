@@ -100,5 +100,44 @@ export class UnitsService {
       where: { id },
     })
   }
+
+  async importBatch(items: Array<{ block?: string; number: string }>) {
+    if (!Array.isArray(items) || items.length === 0) {
+      return { totalReceived: 0, created: 0, skipped: 0 }
+    }
+
+    const cleaned = items
+      .filter((i) => i && typeof i.number === "string" && i.number.trim() !== "")
+      .map((i) => ({
+        block: (i.block || "UNICO").toUpperCase().trim(),
+        number: i.number.trim(),
+        isActive: true,
+      }))
+
+    // Remove duplicatas internas do lote
+    const uniqueMap = new Map<string, { block: string; number: string; isActive: boolean }>()
+    for (const item of cleaned) {
+      const key = `${item.block}:${item.number}`
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, item)
+      }
+    }
+    const uniqueItems = Array.from(uniqueMap.values())
+
+    const result = await this.prisma.unit.createMany({
+      data: uniqueItems,
+      skipDuplicates: true,
+    })
+
+    return {
+      totalReceived: items.length,
+      created: result.count,
+      skipped: items.length - result.count,
+    }
+  }
+
+  getTemplateCsv() {
+    return "bloco,numero\nA,101\nA,102\nA,103\nB,201\nB,202\nB,203\n"
+  }
 }
 
