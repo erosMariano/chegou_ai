@@ -12,6 +12,7 @@ import { PackagesModule } from "./modules/packages/packages.module"
 import { AiModule } from "./modules/ai/ai.module"
 import { AuditModule } from "./modules/audit/audit.module"
 import { CondominiumModule } from "./modules/condominium/condominium.module"
+import { UsersModule } from "./modules/users/users.module"
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { CondominiumModule } from "./modules/condominium/condominium.module"
     AiModule,
     AuditModule,
     CondominiumModule,
+    UsersModule,
   ],
   providers: [
     {
