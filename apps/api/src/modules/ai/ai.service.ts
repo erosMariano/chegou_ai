@@ -189,51 +189,77 @@ Retorne um JSON estrito com os seguintes campos:
 - confidenceScore (número entre 0.0 e 1.0)
 - uncertaintyReason (string ou null se confidenceScore < 0.8)`
 
-    const model = this.config.get<string>("AI_MODEL_VISION") || this.config.get<string>("GEMINI_MODEL") || "gemini-2.5-flash"
-    this.logger.log(`Invocando Gemini Vision com o modelo: ${model}`)
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: prompt },
-                {
-                  inline_data: {
-                    mime_type: effectiveMime,
-                    data: cleanBase64,
-                  },
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            response_mime_type: "application/json",
-            temperature: 0.1,
-          },
-        }),
-      }
+    const configuredModel =
+      this.config.get<string>("AI_MODEL_VISION") ||
+      this.config.get<string>("GEMINI_MODEL") ||
+      "gemini-3.5-flash-lite"
+
+    // Modelos candidatos em ordem de prioridade (velocidade ultrabaixa -> fallback de resiliência)
+    const candidateModels = [configuredModel, "gemini-3.5-flash-lite", "gemini-3.5-flash"].filter(
+      (m, idx, self) => Boolean(m) && self.indexOf(m) === idx
     )
 
-    if (!response.ok) {
-      const errText = await response.text()
-      throw new Error(`Google API error (${response.status}): ${errText}`)
+    let lastError: any = null
+
+    for (const model of candidateModels) {
+      const callStart = Date.now()
+      try {
+        this.logger.log(`Invocando Gemini Vision com o modelo de alta velocidade: ${model}`)
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": apiKey,
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: prompt },
+                    {
+                      inline_data: {
+                        mime_type: effectiveMime,
+                        data: cleanBase64,
+                      },
+                    },
+                  ],
+                },
+              ],
+              generationConfig: {
+                response_mime_type: "application/json",
+                temperature: 0.1,
+                max_output_tokens: 350,
+              },
+            }),
+          }
+        )
+
+        if (!response.ok) {
+          const errText = await response.text()
+          this.logger.warn(`Modelo ${model} retornou status ${response.status}: ${errText}. Tentando próximo modelo...`)
+          lastError = new Error(`Google API error (${response.status}): ${errText}`)
+          continue
+        }
+
+        const data = await response.json()
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+        if (!text) {
+          throw new Error("Resposta vazia da API do Gemini")
+        }
+
+        const cleanText = text.replace(/^```json\s*/i, "").replace(/\s*```$/, "").trim()
+        const parsed = JSON.parse(cleanText)
+        this.logger.log(`Gemini Vision (${model}) respondeu com sucesso em ${Date.now() - callStart}ms`)
+        return parsed
+      } catch (err: any) {
+        lastError = err
+        this.logger.warn(`Erro no modelo ${model}: ${err.message}.`)
+      }
     }
 
-    const data = await response.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!text) {
-      throw new Error("Resposta vazia da API do Gemini")
-    }
-
-    const cleanText = text.replace(/^```json\s*/i, "").replace(/\s*```$/, "").trim()
-    return JSON.parse(cleanText)
+    throw lastError || new Error("Falha ao comunicar com os modelos de IA")
   }
 }
 
