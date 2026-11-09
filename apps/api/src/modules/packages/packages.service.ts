@@ -157,7 +157,10 @@ export class PackagesService {
     // 2. Busca da encomenda
     if (dto.codeType === "QR") {
       targetPackage = await this.prisma.package.findFirst({
-        where: { pickupQrToken: rawCode },
+        where: {
+          pickupQrToken: rawCode,
+          status: { in: [PackageStatus.RECEIVED, PackageStatus.NOTIFIED, PackageStatus.NOTIFICATION_FAILED] },
+        },
         include: { unit: true },
       })
     } else {
@@ -205,6 +208,12 @@ export class PackagesService {
         })
         if (delivered) {
           throw new ConflictException("Esta encomenda já foi retirada anteriormente.")
+        }
+        const cancelled = await this.prisma.package.findFirst({
+          where: { pickupQrToken: rawCode, status: PackageStatus.CANCELLED },
+        })
+        if (cancelled) {
+          throw new ConflictException("Esta encomenda foi cancelada/devolvida e seu passe foi invalidado.")
         }
       }
       throw new NotFoundException("Código de retirada (PIN ou QR Code) inválido ou encomenda não encontrada.")
@@ -414,6 +423,8 @@ export class PackagesService {
         where: { id },
         data: {
           status: PackageStatus.CANCELLED,
+          pickupPinHash: await bcrypt.hash(`CANCELLED_${Date.now()}`, 10),
+          pickupQrToken: `CANCELLED_${randomUUID()}`,
           version: { increment: 1 },
         },
         include: { unit: true },
