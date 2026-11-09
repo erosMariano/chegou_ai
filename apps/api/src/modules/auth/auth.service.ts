@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Logger,
 } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
@@ -320,6 +321,68 @@ export class AuthService {
     await this.redis.del(`auth:reset_token:${normalizedEmail}`)
 
     return { success: true, message: "Senha redefinida com sucesso. Faça login com sua nova senha." }
+  }
+
+  async setupInitialAdmin(data: {
+    condominiumName: string
+    cnpj?: string
+    name: string
+    email: string
+    password: string
+  }) {
+    // Lock distribuído no Redis para prevenir Race Condition / TOCTOU
+    const lockKey = "lock:setup_initial_admin"
+    const acquired = await this.redis.setIfNotExists(lockKey, "locked", 30)
+    if (!acquired) {
+      throw new ConflictException("Configuração inicial já está sendo processada por outro terminal.")
+    }
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const adminCount = await tx.user.count({
+          where: { role: UserRole.ADMIN },
+        })
+
+        if (adminCount > 0) {
+          throw new ForbiddenException(
+            "O administrador inicial do condomínio já foi configurado. Acesse pelo login."
+          )
+        }
+
+        let condo = await tx.condominium.findFirst()
+        if (!condo) {
+          condo = await tx.condominium.create({
+            data: {
+              name: data.condominiumName.trim(),
+              cnpj: data.cnpj?.trim() || null,
+            },
+          })
+        } else {
+          await tx.condominium.update({
+            where: { id: condo.id },
+            data: {
+              name: data.condominiumName.trim(),
+              ...(data.cnpj ? { cnpj: data.cnpj.trim() } : {}),
+            },
+          })
+        }
+
+        const passwordHash = await bcrypt.hash(data.password, 10)
+        const user = await tx.user.create({
+          data: {
+            name: data.name.trim(),
+            email: data.email.toLowerCase().trim(),
+            passwordHash,
+            role: UserRole.ADMIN,
+            isActive: true,
+          },
+        })
+
+        return this.buildUserSession(user)
+      })
+    } finally {
+      await this.redis.del(lockKey)
+    }
   }
 }
 
