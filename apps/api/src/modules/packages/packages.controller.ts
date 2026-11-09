@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Query,
@@ -84,5 +85,15 @@ export class PackagesController {
       throw new ForbiddenException("Você não possui permissão para visualizar encomendas de outra unidade.")
     }
     return pkg
+  }
+
+  @Patch(":id/cancel")
+  @Roles(UserRole.PORTER, UserRole.ADMIN)
+  async cancelPackage(
+    @Param("id", new ParseUUIDPipe()) id: string,
+    @Body() body: { reason?: string; notes?: string },
+    @Request() req: any
+  ) {
+    return this.packagesService.cancelPackage(id, body?.reason, body?.notes, req.user?.id)
   }
 }

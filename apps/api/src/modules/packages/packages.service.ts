@@ -390,4 +390,48 @@ export class PackagesService {
       pickupPin: isResident ? pickupPin : undefined,
     }
   }
+
+  async cancelPackage(id: string, reason?: string, notes?: string, actorUserId?: string) {
+    const pkg = await this.prisma.package.findUnique({
+      where: { id },
+      include: { unit: true },
+    })
+
+    if (!pkg) {
+      throw new NotFoundException("Encomenda não encontrada.")
+    }
+
+    if (pkg.status === PackageStatus.DELIVERED) {
+      throw new ConflictException("Esta encomenda já foi entregue e não pode ser cancelada.")
+    }
+
+    if (pkg.status === PackageStatus.CANCELLED) {
+      throw new ConflictException("Esta encomenda já se encontra cancelada.")
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.package.update({
+        where: { id },
+        data: {
+          status: PackageStatus.CANCELLED,
+          version: { increment: 1 },
+        },
+        include: { unit: true },
+      })
+
+      await tx.packageEvent.create({
+        data: {
+          packageId: id,
+          actorUserId,
+          eventType: "CANCELLED",
+          metadata: {
+            reason: reason || "DEVOLUCAO_TRANSPORTADORA",
+            notes: notes || "Cancelamento registrado na portaria",
+          },
+        },
+      })
+
+      return updated
+    })
+  }
 }
