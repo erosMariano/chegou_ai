@@ -1,14 +1,17 @@
-import { Injectable, UnauthorizedException, NotFoundException } from "@nestjs/common"
+import { Injectable, UnauthorizedException, NotFoundException, BadRequestException } from "@nestjs/common"
 import { JwtService } from "@nestjs/jwt"
 import { PrismaService } from "@/prisma/prisma.service"
+import { RedisService } from "@/common/redis/redis.service"
 import * as bcrypt from "bcryptjs"
+import { randomBytes } from "crypto"
 import { UserRole } from "@prisma/client"
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
+    private readonly redis: RedisService
   ) {}
 
   async login(email: string, pass: string) {
@@ -216,7 +219,10 @@ export class AuthService {
       }
     }
 
-    const token = Buffer.from(`${user.id}:${Date.now()}:${Math.random().toString(36).slice(2)}`).toString("base64url")
+    // Token criptograficamente seguro com expiração de 15 minutos armazenado no Redis
+    const token = randomBytes(32).toString("hex")
+    await this.redis.set(`auth:reset_token:${normalizedEmail}`, token, 900)
+
     return {
       message: "Se o e-mail estiver cadastrado, as instruções para redefinição foram geradas.",
       resetToken: token,
@@ -224,8 +230,21 @@ export class AuthService {
     }
   }
 
-  async resetPassword(email: string, pass: string) {
+  async resetPassword(email: string, token: string, pass: string) {
     const normalizedEmail = (email || "").toLowerCase().trim()
+    const cleanToken = (token || "").trim()
+
+    if (!cleanToken) {
+      throw new BadRequestException("Token de validação é obrigatório.")
+    }
+
+    const storedToken = await this.redis.get(`auth:reset_token:${normalizedEmail}`)
+    if (!storedToken || storedToken !== cleanToken) {
+      throw new UnauthorizedException(
+        "Token de redefinição inválido ou expirado. Por favor, solicite uma nova redefinição."
+      )
+    }
+
     const user = await this.prisma.user.findUnique({
       where: { email: normalizedEmail },
     })
@@ -239,6 +258,9 @@ export class AuthService {
       where: { id: user.id },
       data: { passwordHash },
     })
+
+    // Invalidação imediata do token para prevenir Replay Attack
+    await this.redis.del(`auth:reset_token:${normalizedEmail}`)
 
     return { success: true, message: "Senha redefinida com sucesso. Faça login com sua nova senha." }
   }
