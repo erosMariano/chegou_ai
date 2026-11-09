@@ -19,6 +19,20 @@ export class UnitsController {
     return this.unitsService.findAll(canViewResidents)
   }
 
+  @Get("template-csv")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async getTemplateCsv() {
+    return { csv: this.unitsService.getTemplateCsv() }
+  }
+
+  @Post("import-batch")
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  async importBatch(@Body() body: { items: Array<{ block?: string; number: string }> }) {
+    return this.unitsService.importBatch(body?.items || [])
+  }
+
   @Get(":id")
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.PORTER, UserRole.RESIDENT)
@@ -48,19 +62,5 @@ export class UnitsController {
   @Roles(UserRole.ADMIN)
   async remove(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.unitsService.remove(id)
-  }
-
-  @Post("import-batch")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  async importBatch(@Body() body: { items: Array<{ block?: string; number: string }> }) {
-    return this.unitsService.importBatch(body?.items || [])
-  }
-
-  @Get("template-csv")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  async getTemplateCsv() {
-    return { csv: this.unitsService.getTemplateCsv() }
   }
 }

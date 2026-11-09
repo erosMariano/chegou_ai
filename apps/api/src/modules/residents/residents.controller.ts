@@ -61,6 +61,30 @@ export class ResidentsController {
     }
   }
 
+  @Get("template-csv")
+  @Roles(UserRole.ADMIN)
+  async getTemplateCsv() {
+    return { csv: this.residentsService.getTemplateCsv() }
+  }
+
+  @Post("import-batch")
+  @Roles(UserRole.ADMIN)
+  async importBatch(
+    @Body()
+    body: {
+      items: Array<{
+        block?: string
+        number: string
+        fullName: string
+        email: string
+        phone?: string
+        isPrimary?: boolean
+      }>
+    }
+  ) {
+    return this.residentsService.importBatch(body?.items || [])
+  }
+
   @Get(":id")
   @Roles(UserRole.ADMIN, UserRole.PORTER)
   async findOne(@Param("id", new ParseUUIDPipe()) id: string) {
@@ -83,30 +107,6 @@ export class ResidentsController {
   @Roles(UserRole.ADMIN)
   async delete(@Param("id", new ParseUUIDPipe()) id: string) {
     return this.residentsService.delete(id)
-  }
-
-  @Post("import-batch")
-  @Roles(UserRole.ADMIN)
-  async importBatch(
-    @Body()
-    body: {
-      items: Array<{
-        block?: string
-        number: string
-        fullName: string
-        email: string
-        phone?: string
-        isPrimary?: boolean
-      }>
-    }
-  ) {
-    return this.residentsService.importBatch(body?.items || [])
-  }
-
-  @Get("template-csv")
-  @Roles(UserRole.ADMIN)
-  async getTemplateCsv() {
-    return { csv: this.residentsService.getTemplateCsv() }
   }
 
   @Post(":id/invite")
