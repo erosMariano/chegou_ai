@@ -57,10 +57,10 @@ services:
         condition: service_healthy
     environment:
       PORT: 8080
-      DATABASE_URL: postgresql://${POSTGRES_USER:-chegou_admin}:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD para producao}@postgres:5432/${POSTGRES_DB:-chegou_ai}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-chegou_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-chegou_ai}?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-chegou_mq}:${RABBITMQ_PASS:?Defina RABBITMQ_PASS para producao}@rabbitmq:5672
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-chegou_mq}:${RABBITMQ_PASS}@rabbitmq:5672
       JWT_SECRET: ${JWT_SECRET}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
