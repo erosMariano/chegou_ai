@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from "@nestjs/common"
+import { Controller, Get, Query, UseGuards, Res } from "@nestjs/common"
 import { AuditService } from "./audit.service"
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard"
 import { RolesGuard } from "@/common/guards/roles.guard"
@@ -23,6 +23,14 @@ export class AuditController {
       return res.items
     }
     return res
+  }
+
+  @Get("export")
+  async exportCsv(@Res() res: any) {
+    const csv = await this.auditService.exportCsv()
+    res.setHeader("Content-Type", "text/csv; charset=utf-8")
+    res.setHeader("Content-Disposition", 'attachment; filename="auditoria-chegou-ai.csv"')
+    return res.send(csv)
   }
 
   @Get("metrics")

@@ -132,5 +132,20 @@ export class CondominiumService {
 
     return { message: "Endereço removido com sucesso.", id }
   }
+
+  async getProfile() {
+    return this.getOrCreateCondominium()
+  }
+
+  async updateProfile(data: { name?: string; cnpj?: string }) {
+    const condo = await this.getOrCreateCondominium()
+    return this.prisma.condominium.update({
+      where: { id: condo.id },
+      data: {
+        ...(data.name ? { name: data.name.trim() } : {}),
+        ...(data.cnpj !== undefined ? { cnpj: data.cnpj.trim() } : {}),
+      },
+    })
+  }
 }
 

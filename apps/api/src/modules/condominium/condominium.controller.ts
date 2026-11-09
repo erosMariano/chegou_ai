@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Delete,
   Body,
@@ -20,6 +21,18 @@ import { CreateCondominiumAddressDto, UpdateCondominiumAddressDto } from "./dto/
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CondominiumController {
   constructor(private readonly condominiumService: CondominiumService) {}
+
+  @Get("profile")
+  @Roles(UserRole.ADMIN, UserRole.PORTER, UserRole.RESIDENT)
+  async getProfile() {
+    return this.condominiumService.getProfile()
+  }
+
+  @Put("profile")
+  @Roles(UserRole.ADMIN)
+  async updateProfile(@Body() body: { name?: string; cnpj?: string }) {
+    return this.condominiumService.updateProfile(body)
+  }
 
   @Get("addresses")
   @Roles(UserRole.ADMIN, UserRole.PORTER, UserRole.RESIDENT)

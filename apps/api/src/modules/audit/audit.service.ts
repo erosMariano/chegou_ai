@@ -89,5 +89,37 @@ export class AuditService {
       totalAll,
     }
   }
+
+  async exportCsv() {
+    const events = await this.prisma.packageEvent.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 500,
+      include: {
+        package: {
+          include: { unit: true },
+        },
+        actorUser: {
+          select: { name: true, role: true },
+        },
+      },
+    })
+
+    const header = "Data,Hora,Evento,Operador,Destinatario,Unidade,Transportadora,Rastreio\n"
+    const rows = events
+      .map((e) => {
+        const d = new Date(e.createdAt)
+        const dataStr = d.toLocaleDateString("pt-BR")
+        const horaStr = d.toLocaleTimeString("pt-BR")
+        const operador = e.actorUser?.name || "Sistema / Notificador"
+        const dest = e.package?.recipientNameRaw || "-"
+        const unidade = e.package ? `${e.package.unit.block}-${e.package.unit.number}` : "-"
+        const carrier = e.package?.carrier || "-"
+        const tracking = e.package?.trackingCode || "-"
+        return `"${dataStr}","${horaStr}","${e.eventType}","${operador}","${dest}","${unidade}","${carrier}","${tracking}"`
+      })
+      .join("\n")
+
+    return header + rows
+  }
 }
 
