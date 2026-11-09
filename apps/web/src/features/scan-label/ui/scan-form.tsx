@@ -133,9 +133,10 @@ export function ScanForm({ units }: ScanFormProps) {
         }
 
         const scorePct = Math.round(res.confidenceScore * 100)
+        const durationSec = (res.processingTimeMs / 1000).toFixed(1)
         if (res.confidenceScore >= 0.8) {
-          toast.success("Etiqueta analisada com sucesso via Gemini 2.5 Flash!", {
-            description: `Confiança: ${scorePct}% em ${res.processingTimeMs}ms`,
+          toast.success("Etiqueta analisada com sucesso!", {
+            description: `Confiança: ${scorePct}% em ${durationSec}s`,
           })
         } else {
           toast.warning("Atenção: Confiança da leitura abaixo de 80%", {

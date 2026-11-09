@@ -3,6 +3,7 @@
 import React, { useRef } from "react"
 import { BorderBeam } from "@/shared/ui/border-beam"
 import { Camera, Sparkles, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react"
+import { compressImageForOcr } from "@/shared/lib/image-compressor"
 
 interface ScannerHeroProps {
   isScanning: boolean
@@ -23,19 +24,34 @@ export function ScannerHero({
 }: ScannerHeroProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    const mimeType = file.type || "image/jpeg"
-    const reader = new FileReader()
-    reader.onload = () => {
-      const base64 = reader.result as string
-      onCaptureImage(base64, mimeType)
+    try {
+      const result = await compressImageForOcr(file, {
+        maxWidth: 1280,
+        maxHeight: 1280,
+        quality: 0.82,
+        mimeType: "image/jpeg",
+      })
+      console.log(
+        `[Chegou.AI OCR] Imagem otimizada: ${result.originalSizeKb}KB -> ${result.compressedSizeKb}KB (${result.width}x${result.height})`
+      )
+      onCaptureImage(result.base64, result.mimeType)
+    } catch {
+      // Fallback seguro em caso de indisponibilidade de Canvas
+      const mimeType = file.type || "image/jpeg"
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64 = reader.result as string
+        onCaptureImage(base64, mimeType)
+      }
+      reader.readAsDataURL(file)
+    } finally {
+      // Limpar valor para permitir selecionar o mesmo arquivo novamente se desejar
+      e.target.value = ""
     }
-    reader.readAsDataURL(file)
-    // Limpar valor para permitir selecionar o mesmo arquivo novamente se desejar
-    e.target.value = ""
   }
 
   function handleOpenPicker() {
