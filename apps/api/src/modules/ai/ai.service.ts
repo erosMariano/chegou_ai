@@ -85,6 +85,25 @@ export class AiService {
       extractedCity: extracted.extractedCity,
     })
 
+    // REGRA DE SEGURANÇA: Se a IA identificar que o endereço é diferente do condomínio (isMatch === false),
+    // não deve preencher os dados da encomenda nem associar a qualquer unidade.
+    if (addressValidation.isMatch === false) {
+      this.logger.warn(
+        `Endereço divergente detectado: ${addressValidation.mismatchReason}. Bloqueando preenchimento dos campos de dados da encomenda.`
+      )
+      matchedUnitId = null
+      extracted = {
+        ...extracted,
+        recipientName: null,
+        unitBlock: null,
+        unitNumber: null,
+        trackingCode: null,
+        carrier: null,
+        uncertaintyReason:
+          addressValidation.mismatchReason || "Endereço não corresponde a nenhum dos endereços oficiais do condomínio.",
+      }
+    }
+
     const confidenceScore =
       typeof extracted.confidenceScore === "number" && !isNaN(extracted.confidenceScore)
         ? extracted.confidenceScore
