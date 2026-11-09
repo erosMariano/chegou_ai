@@ -20,13 +20,16 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
 
-COPY package*.json ./
-COPY prisma ./prisma/
+COPY --chown=node:node package*.json ./
+COPY --chown=node:node prisma ./prisma/
 
 RUN npm ci --omit=dev
 RUN npx prisma generate
 
-COPY --from=builder /app/dist ./dist
+COPY --chown=node:node --from=builder /app/dist ./dist
+
+# Princípio do Menor Privilégio: Execução com usuário sem privilégios de root
+USER node
 
 EXPOSE 8080
 
