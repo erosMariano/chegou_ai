@@ -4,6 +4,7 @@ import { APP_GUARD } from "@nestjs/core"
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler"
 import { PrismaModule } from "./prisma/prisma.module"
 import { RedisModule } from "./common/redis/redis.module"
+import { MailModule } from "./common/mail/mail.module"
 import { NotificationsModule } from "./modules/notifications/notifications.module"
 import { AuthModule } from "./modules/auth/auth.module"
 import { UnitsModule } from "./modules/units/units.module"
@@ -29,6 +30,7 @@ import { UsersModule } from "./modules/users/users.module"
     ]),
     PrismaModule,
     RedisModule,
+    MailModule,
     NotificationsModule,
     AuthModule,
     UnitsModule,
