@@ -4,20 +4,27 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Logger,
 } from "@nestjs/common"
+import { ConfigService } from "@nestjs/config"
 import { JwtService } from "@nestjs/jwt"
 import { PrismaService } from "@/prisma/prisma.service"
 import { RedisService } from "@/common/redis/redis.service"
+import { MailService } from "@/common/mail/mail.service"
 import * as bcrypt from "bcryptjs"
 import { randomBytes } from "crypto"
 import { UserRole } from "@prisma/client"
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name)
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly redis: RedisService
+    private readonly redis: RedisService,
+    private readonly config: ConfigService,
+    private readonly mailService: MailService
   ) {}
 
   async login(email: string, pass: string) {
@@ -184,16 +191,23 @@ export class AuthService {
       throw new BadRequestException("Token de ativação é obrigatório.")
     }
 
-    let user = await this.prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    })
-
-    if (user && user.isActive) {
-      throw new ConflictException(
-        "Esta conta já se encontra ativa. Acesse pelo login ou utilize a recuperação de senha."
+    // 1. Validação estrita do token de convite no Redis
+    const storedToken = await this.redis.get(`auth:invite_token:${normalizedEmail}`)
+    if (!storedToken || storedToken !== cleanToken) {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      })
+      if (existingUser && existingUser.isActive) {
+        throw new ConflictException(
+          "Esta conta já se encontra ativa. Acesse pelo login ou utilize a recuperação de senha."
+        )
+      }
+      throw new UnauthorizedException(
+        "Token de ativação inválido ou expirado. Solicite um novo convite à administração do condomínio."
       )
     }
 
+    // 2. Busca cadastro de morador
     const resident = await this.prisma.resident.findFirst({
       where: { email: normalizedEmail },
     })
@@ -202,15 +216,11 @@ export class AuthService {
       throw new NotFoundException("Cadastro de morador não encontrado para este e-mail.")
     }
 
-    // Validação estrita do token de convite no Redis
-    const storedToken = await this.redis.get(`auth:invite_token:${normalizedEmail}`)
-    if (!storedToken || storedToken !== cleanToken) {
-      throw new UnauthorizedException(
-        "Token de ativação inválido ou expirado. Solicite um novo convite à administração do condomínio."
-      )
-    }
-
     const passwordHash = await bcrypt.hash(pass, 10)
+
+    let user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    })
 
     if (user) {
       user = await this.prisma.user.update({
@@ -230,7 +240,7 @@ export class AuthService {
       })
     }
 
-    // Invalidação imediata do token de convite após ativação com sucesso
+    // 3. Invalidação imediata do token de convite após ativação com sucesso (anti-replay)
     await this.redis.del(`auth:invite_token:${normalizedEmail}`)
 
     return this.buildUserSession(user)
@@ -252,10 +262,28 @@ export class AuthService {
     const token = randomBytes(32).toString("hex")
     await this.redis.set(`auth:reset_token:${normalizedEmail}`, token, 900)
 
+    const appUrl =
+      this.config.get<string>("FRONTEND_URL") ||
+      this.config.get<string>("NEXT_PUBLIC_APP_URL") ||
+      "http://localhost:3000"
+    const cleanAppUrl = appUrl.trim().replace(/\/+$/, "")
+    const resetUrl = `${cleanAppUrl}/redefinir-senha?token=${token}&email=${encodeURIComponent(normalizedEmail)}`
+
+    // Despacha e-mail de redefinição via Resend
+    this.mailService
+      .sendPasswordResetEmail({
+        to: user.email,
+        userName: user.name,
+        resetUrl,
+      })
+      .catch((err) => {
+        this.logger.error(`Falha ao despachar e-mail de recuperação via Resend: ${err.message}`)
+      })
+
     return {
       message: "Se o e-mail estiver cadastrado, as instruções para redefinição foram geradas.",
       resetToken: token,
-      resetUrl: `/redefinir-senha?token=${token}&email=${encodeURIComponent(normalizedEmail)}`,
+      resetUrl,
     }
   }
 
