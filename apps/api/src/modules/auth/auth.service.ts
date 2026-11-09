@@ -166,5 +166,81 @@ export class AuthService {
       token,
     }
   }
+
+  async activateAccount(email: string, pass: string) {
+    const normalizedEmail = (email || "").toLowerCase().trim()
+    let user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    })
+
+    const resident = await this.prisma.resident.findFirst({
+      where: { email: normalizedEmail },
+    })
+
+    if (!resident) {
+      throw new NotFoundException("Cadastro de morador não encontrado para este e-mail.")
+    }
+
+    const passwordHash = await bcrypt.hash(pass, 10)
+
+    if (user) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash, isActive: true },
+      })
+    } else {
+      user = await this.prisma.user.create({
+        data: {
+          name: resident.fullName,
+          email: resident.email,
+          passwordHash,
+          role: UserRole.RESIDENT,
+          unitId: resident.unitId,
+          isActive: true,
+        },
+      })
+    }
+
+    return this.buildUserSession(user)
+  }
+
+  async forgotPassword(email: string) {
+    const normalizedEmail = (email || "").toLowerCase().trim()
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    })
+
+    if (!user) {
+      return {
+        message: "Se o e-mail estiver cadastrado, as instruções para redefinição foram geradas.",
+      }
+    }
+
+    const token = Buffer.from(`${user.id}:${Date.now()}:${Math.random().toString(36).slice(2)}`).toString("base64url")
+    return {
+      message: "Se o e-mail estiver cadastrado, as instruções para redefinição foram geradas.",
+      resetToken: token,
+      resetUrl: `/redefinir-senha?token=${token}&email=${encodeURIComponent(normalizedEmail)}`,
+    }
+  }
+
+  async resetPassword(email: string, pass: string) {
+    const normalizedEmail = (email || "").toLowerCase().trim()
+    const user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    })
+
+    if (!user) {
+      throw new NotFoundException("Usuário não encontrado.")
+    }
+
+    const passwordHash = await bcrypt.hash(pass, 10)
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    })
+
+    return { success: true, message: "Senha redefinida com sucesso. Faça login com sua nova senha." }
+  }
 }
 

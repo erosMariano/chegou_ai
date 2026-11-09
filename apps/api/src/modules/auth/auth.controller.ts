@@ -33,4 +33,22 @@ export class AuthController {
   async getMe(@Request() req: any) {
     return this.authService.getMe(req.user.id)
   }
+
+  @Post("activate")
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  async activateAccount(@Body() body: { email: string; password: string }) {
+    return this.authService.activateAccount(body?.email, body?.password)
+  }
+
+  @Post("forgot-password")
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async forgotPassword(@Body() body: { email: string }) {
+    return this.authService.forgotPassword(body?.email)
+  }
+
+  @Post("reset-password")
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async resetPassword(@Body() body: { email: string; password: string }) {
+    return this.authService.resetPassword(body?.email, body?.password)
+  }
 }
