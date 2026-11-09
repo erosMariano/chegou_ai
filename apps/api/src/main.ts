@@ -7,7 +7,12 @@ import * as express from "express"
 
 async function bootstrap() {
   const logger = new Logger("Bootstrap")
-  const app = await NestFactory.create(AppModule)
+  logger.log("1. Iniciando bootstrap do NestJS...")
+
+  const app = await NestFactory.create(AppModule, {
+    logger: ["log", "error", "warn", "debug", "verbose"],
+  })
+  logger.log("2. AppModule criado com sucesso.")
 
   // Hardening de Cabeçalhos HTTP (CSP, HSTS, X-Frame-Options, X-Content-Type-Options)
   app.use(
@@ -67,11 +72,15 @@ async function bootstrap() {
     })
   )
 
+  logger.log("3. Middleware, CORS, filtros e pipes configurados.")
+
   const port = process.env.PORT || 8080
   await app.listen(port, "0.0.0.0")
-  logger.log(`🚀 Chegou.AI Core API iniciado com sucesso na porta ${port}`)
+  logger.log(`4. 🚀 Chegou.AI Core API iniciado com sucesso na porta ${port}`)
   logger.log(`🔗 API Base URL: http://localhost:${port}/api/v1`)
 }
 
-bootstrap()
-
+bootstrap().catch((err) => {
+  console.error("FATAL BOOTSTRAP ERROR:", err)
+  process.exit(1)
+})
