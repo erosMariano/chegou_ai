@@ -17,7 +17,27 @@ import {
   ShieldCheck,
   Building,
   AlertCircle,
+  Search,
+  Loader2,
+  CheckCircle2,
 } from "lucide-react"
+
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/shared/ui/alert-dialog"
+
+function formatCepInput(val: string): string {
+  const digits = val.replace(/\D/g, "").slice(0, 8)
+  if (digits.length <= 5) return digits
+  return `${digits.slice(0, 5)}-${digits.slice(5, 8)}`
+}
 
 interface AddressesManagerWidgetProps {
   initialAddresses?: CondominiumAddress[]
@@ -37,9 +57,21 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
   const [city, setCity] = useState("")
   const [state, setState] = useState("RJ")
   const [zipCode, setZipCode] = useState("")
+  const [isLoadingCep, setIsLoadingCep] = useState(false)
+  const [isCepAutofilled, setIsCepAutofilled] = useState(false)
+  // Desabilitado por default: apenas se o CEP der erro os campos serão habilitados para digitação manual
+  const [isAddressFieldsDisabled, setIsAddressFieldsDisabled] = useState(true)
   const [aliasesRaw, setAliasesRaw] = useState("")
   const [isPrimary, setIsPrimary] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [confirmAddressDialog, setConfirmAddressDialog] = useState<{
+    isOpen: boolean
+    title: string
+    description: string
+    confirmLabel?: string
+    isDestructive?: boolean
+    onConfirm: () => void
+  } | null>(null)
 
   useEffect(() => {
     loadAddresses()
@@ -59,6 +91,64 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
     }
   }
 
+  async function fetchViaCep(rawCep: string) {
+    const clean = rawCep.replace(/\D/g, "")
+    if (clean.length !== 8) return
+
+    try {
+      setIsLoadingCep(true)
+      const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`)
+      if (!res.ok) throw new Error("Falha ao consultar CEP")
+      
+      const data = await res.json()
+      if (data.erro || data.erro === "true") {
+        // CASO DÊ ERRO: HABILITA OS CAMPOS PARA DIGITAÇÃO MANUAL
+        setIsAddressFieldsDisabled(false)
+        setIsCepAutofilled(false)
+        toast.warning("CEP não localizado na base dos Correios. Os campos foram liberados para preenchimento manual.")
+        return
+      }
+
+      // Preenchimento com dados oficiais dos Correios (mantém desabilitado por padrão)
+      setStreet(data.logradouro || "")
+      setNeighborhood(data.bairro || "")
+      setCity(data.localidade || "")
+      setState(data.uf ? data.uf.toUpperCase() : "SP")
+      setIsCepAutofilled(true)
+      setIsAddressFieldsDisabled(true)
+      toast.success("Endereço localizado com sucesso via ViaCEP!")
+
+      // Foca automaticamente no campo de número
+      setTimeout(() => {
+        const numberInput = document.getElementById("address-number")
+        if (numberInput) numberInput.focus()
+      }, 100)
+    } catch {
+      // CASO DÊ ERRO (API fora ou rede): HABILITA OS CAMPOS PARA DIGITAÇÃO MANUAL
+      setIsAddressFieldsDisabled(false)
+      setIsCepAutofilled(false)
+      toast.error("Não foi possível consultar a API do ViaCEP. Os campos foram liberados para preenchimento manual.")
+    } finally {
+      setIsLoadingCep(false)
+    }
+  }
+
+  async function handleCepChange(value: string) {
+    const formatted = formatCepInput(value)
+    setZipCode(formatted)
+
+    const clean = formatted.replace(/\D/g, "")
+    if (clean.length === 8) {
+      await fetchViaCep(clean)
+    } else {
+      setIsCepAutofilled(false)
+      // Se apagar o CEP, mantém o comportamento padrão de campos desabilitados até buscar ou dar erro
+      if (!editingAddress) {
+        setIsAddressFieldsDisabled(true)
+      }
+    }
+  }
+
   function resetFormAndClose() {
     setEditingAddress(null)
     setLabel("")
@@ -66,8 +156,11 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
     setNumber("")
     setNeighborhood("")
     setCity("")
-    setState("RJ")
+    setState("SP")
     setZipCode("")
+    setIsCepAutofilled(false)
+    setIsAddressFieldsDisabled(true) // Desabilitado por default!
+    setIsLoadingCep(false)
     setAliasesRaw("")
     setIsPrimary(false)
     setIsModalOpen(false)
@@ -80,8 +173,11 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
     setNumber("")
     setNeighborhood("")
     setCity("")
-    setState("RJ")
+    setState("SP")
     setZipCode("")
+    setIsCepAutofilled(false)
+    setIsAddressFieldsDisabled(true) // Desabilitado por default!
+    setIsLoadingCep(false)
     setAliasesRaw("")
     setIsPrimary(addresses.length === 0)
     setIsModalOpen(true)
@@ -95,7 +191,10 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
     setNeighborhood(addr.neighborhood)
     setCity(addr.city)
     setState(addr.state)
-    setZipCode(addr.zipCode)
+    setZipCode(formatCepInput(addr.zipCode))
+    setIsCepAutofilled(false)
+    setIsAddressFieldsDisabled(false) // Ao editar endereço existente, campos habilitados
+    setIsLoadingCep(false)
     setAliasesRaw((addr.addressAliases || []).join(", "))
     setIsPrimary(addr.isPrimary)
     setIsModalOpen(true)
@@ -156,24 +255,30 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
     }
   }
 
-  async function handleDelete(addr: CondominiumAddress) {
+  function handleDelete(addr: CondominiumAddress) {
     if (addresses.length <= 1) {
       toast.error("O condomínio deve possuir no mínimo 1 endereço oficial cadastrado.")
       return
     }
 
-    if (confirm(`Tem certeza que deseja remover o endereço "${addr.label}"?`)) {
-      try {
-        await condominiumPort.deleteAddress(addr.id)
-        setAddresses((prev) => prev.filter((a) => a.id !== addr.id))
-        toast.success(`Endereço "${addr.label}" removido com sucesso!`)
-        // Recarrega para atualizar primário caso necessário
-        loadAddresses()
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Erro ao remover endereço"
-        toast.error(msg)
-      }
-    }
+    setConfirmAddressDialog({
+      isOpen: true,
+      title: "Remover Endereço Oficial?",
+      description: `Tem certeza que deseja remover o endereço "${addr.label}"? A portaria e a IA de leitura de etiquetas não validarão mais correspondências direcionadas a esta entrada.`,
+      confirmLabel: "Remover Endereço",
+      isDestructive: true,
+      onConfirm: async () => {
+        try {
+          await condominiumPort.deleteAddress(addr.id)
+          setAddresses((prev) => prev.filter((a) => a.id !== addr.id))
+          toast.success(`Endereço "${addr.label}" removido com sucesso!`)
+          loadAddresses()
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "Erro ao remover endereço"
+          toast.error(msg)
+        }
+      },
+    })
   }
 
   return (
@@ -309,6 +414,78 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* 1. CEP em Primeiro Lugar com Busca Automática via ViaCEP */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="zipCode" className="text-xs font-bold text-zinc-700">
+                    CEP (Busca Automática) *
+                  </Label>
+                  {isLoadingCep && (
+                    <span className="text-[10px] font-semibold text-zinc-500 animate-pulse flex items-center gap-1">
+                      <Loader2 className="size-3 animate-spin text-zinc-800" />
+                      Consultando ViaCEP...
+                    </span>
+                  )}
+                </div>
+                <div className="relative">
+                  <Input
+                    id="zipCode"
+                    placeholder="00000-000"
+                    maxLength={9}
+                    value={zipCode}
+                    onChange={(e) => handleCepChange(e.target.value)}
+                    className="h-10 rounded-lg border-zinc-200 font-mono text-sm pr-9"
+                    autoFocus={!editingAddress}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const clean = zipCode.replace(/\D/g, "")
+                      if (clean.length === 8) fetchViaCep(clean)
+                      else toast.error("Informe os 8 dígitos do CEP para buscar")
+                    }}
+                    disabled={isLoadingCep}
+                    className="absolute right-2 top-2 p-1 text-zinc-400 hover:text-zinc-700 rounded-md transition-colors"
+                    title="Buscar CEP na base dos Correios"
+                  >
+                    {isLoadingCep ? (
+                      <Loader2 className="size-4 animate-spin text-zinc-700" />
+                    ) : (
+                      <Search className="size-4" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-[11px] text-zinc-400">
+                  Digite o CEP: a rua, bairro, cidade e estado são preenchidos automaticamente.
+                </p>
+              </div>
+
+              {/* Banner de Feedback do CEP e desbloqueio manual */}
+              {isCepAutofilled && isAddressFieldsDisabled && (
+                <div className="flex items-center justify-between text-[11px] text-emerald-800 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+                    Endereço preenchido via ViaCEP. Campos bloqueados por padrão.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddressFieldsDisabled(false)}
+                    className="font-bold underline text-emerald-900 hover:text-black shrink-0 ml-2"
+                  >
+                    Editar manualmente
+                  </button>
+                </div>
+              )}
+
+              {/* Banner quando campos foram liberados por falha/erro no CEP */}
+              {!isAddressFieldsDisabled && !isCepAutofilled && (
+                <div className="flex items-center gap-2 text-[11px] text-amber-800 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+                  <AlertCircle className="size-3.5 text-amber-600 shrink-0" />
+                  <span>Campos liberados para preenchimento manual do endereço.</span>
+                </div>
+              )}
+
+              {/* 2. Rótulo da Portaria / Entrada */}
               <div className="space-y-1.5">
                 <Label htmlFor="label" className="text-xs font-bold text-zinc-700">
                   Rótulo / Identificação *
@@ -319,30 +496,38 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                   className="h-10 rounded-lg border-zinc-200"
-                  autoFocus
                 />
               </div>
 
+              {/* 3. Logradouro Oficial e Número */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="col-span-2 space-y-1.5">
-                  <Label htmlFor="street" className="text-xs font-bold text-zinc-700">
-                    Logradouro Oficial *
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="street" className="text-xs font-bold text-zinc-700">
+                      Logradouro Oficial *
+                    </Label>
+                    {isAddressFieldsDisabled && (
+                      <span className="text-[10px] text-zinc-400 font-medium">
+                        {isCepAutofilled ? "Preenchido via CEP" : "Bloqueado (aguardando CEP)"}
+                      </span>
+                    )}
+                  </div>
                   <Input
                     id="street"
-                    placeholder="Ex: Avenida das Américas"
+                    placeholder={isAddressFieldsDisabled ? "Preenchido automaticamente pelo CEP" : "Ex: Avenida das Américas"}
                     value={street}
+                    disabled={isAddressFieldsDisabled}
                     onChange={(e) => setStreet(e.target.value)}
-                    className="h-10 rounded-lg border-zinc-200"
+                    className="h-10 rounded-lg border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-600 disabled:cursor-not-allowed"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="number" className="text-xs font-bold text-zinc-700">
+                  <Label htmlFor="address-number" className="text-xs font-bold text-zinc-700">
                     Número *
                   </Label>
                   <Input
-                    id="number"
+                    id="address-number"
                     placeholder="Ex: 1500"
                     value={number}
                     onChange={(e) => setNumber(e.target.value)}
@@ -351,6 +536,7 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
                 </div>
               </div>
 
+              {/* 4. Bairro, Cidade e UF */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="neighborhood" className="text-xs font-bold text-zinc-700">
@@ -358,10 +544,11 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
                   </Label>
                   <Input
                     id="neighborhood"
-                    placeholder="Ex: Barra da Tijuca"
+                    placeholder={isAddressFieldsDisabled ? "Preenchido pelo CEP" : "Ex: Barra da Tijuca"}
                     value={neighborhood}
+                    disabled={isAddressFieldsDisabled}
                     onChange={(e) => setNeighborhood(e.target.value)}
-                    className="h-10 rounded-lg border-zinc-200"
+                    className="h-10 rounded-lg border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-600 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -371,10 +558,11 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
                   </Label>
                   <Input
                     id="city"
-                    placeholder="Ex: Rio de Janeiro"
+                    placeholder={isAddressFieldsDisabled ? "Preenchida pelo CEP" : "Ex: Rio de Janeiro"}
                     value={city}
+                    disabled={isAddressFieldsDisabled}
                     onChange={(e) => setCity(e.target.value)}
-                    className="h-10 rounded-lg border-zinc-200"
+                    className="h-10 rounded-lg border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-600 disabled:cursor-not-allowed"
                   />
                 </div>
 
@@ -384,29 +572,17 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
                   </Label>
                   <Input
                     id="state"
-                    placeholder="RJ"
+                    placeholder="UF"
                     maxLength={2}
                     value={state}
+                    disabled={isAddressFieldsDisabled}
                     onChange={(e) => setState(e.target.value.toUpperCase())}
-                    className="h-10 rounded-lg border-zinc-200 uppercase"
+                    className="h-10 rounded-lg border-zinc-200 uppercase disabled:bg-zinc-100 disabled:text-zinc-600 disabled:cursor-not-allowed text-center font-bold"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="zipCode" className="text-xs font-bold text-zinc-700">
-                  CEP (Apenas dígitos) *
-                </Label>
-                <Input
-                  id="zipCode"
-                  placeholder="Ex: 22640101"
-                  maxLength={9}
-                  value={zipCode}
-                  onChange={(e) => setZipCode(e.target.value)}
-                  className="h-10 rounded-lg border-zinc-200 font-mono"
-                />
-              </div>
-
+              {/* 5. Variações / Aliases para a IA */}
               <div className="space-y-1.5">
                 <Label htmlFor="aliasesRaw" className="text-xs font-bold text-zinc-700">
                   Variações e Abreviações Aceitas (Separadas por vírgula)
@@ -423,6 +599,7 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
                 </p>
               </div>
 
+              {/* 6. Endereço Principal */}
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="checkbox"
@@ -457,6 +634,42 @@ export function AddressesManagerWidget({ initialAddresses = [] }: AddressesManag
           </div>
         </div>
       )}
+      {/* Alert Dialog de Confirmação (shadcn) */}
+      <AlertDialog
+        open={!!confirmAddressDialog?.isOpen}
+        onOpenChange={(open) => {
+          if (!open) setConfirmAddressDialog(null)
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-extrabold text-zinc-950">
+              {confirmAddressDialog?.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-zinc-500">
+              {confirmAddressDialog?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-3 border-t border-zinc-100 flex flex-col-reverse sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => setConfirmAddressDialog(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                confirmAddressDialog?.onConfirm()
+                setConfirmAddressDialog(null)
+              }}
+              className={
+                confirmAddressDialog?.isDestructive
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-zinc-900 hover:bg-black text-white"
+              }
+            >
+              {confirmAddressDialog?.confirmLabel || "Confirmar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
