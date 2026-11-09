@@ -107,9 +107,10 @@ class MockUnitAdapterImpl implements UnitPort {
   async generateResidentInvite(residentId: string): Promise<{ token: string; inviteUrl: string }> {
     const resident = this.residents.find((r) => r.id === residentId)
     const token = generateUUID()
+    const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
     return {
       token,
-      inviteUrl: `/ativar-conta?token=${token}&email=${encodeURIComponent(resident?.email || "")}`,
+      inviteUrl: `${origin}/ativar-conta?token=${token}&email=${encodeURIComponent(resident?.email || "")}`,
     }
   }
 

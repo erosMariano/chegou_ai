@@ -389,8 +389,16 @@ export function ResidentsManagerWidget({
                     onClick={async () => {
                       try {
                         const invite = await unitPort.generateResidentInvite(res.id)
-                        await navigator.clipboard.writeText(invite.inviteUrl)
-                        toast.success("Link de ativação copiado para a área de transferência!")
+                        const fullUrl = invite.inviteUrl.startsWith("http")
+                          ? invite.inviteUrl
+                          : `${typeof window !== "undefined" ? window.location.origin : ""}${
+                              invite.inviteUrl.startsWith("/") ? "" : "/"
+                            }${invite.inviteUrl}`
+
+                        await navigator.clipboard.writeText(fullUrl)
+                        toast.success("Link completo de ativação copiado!", {
+                          description: fullUrl,
+                        })
                       } catch {
                         toast.error("Não foi possível gerar link de ativação")
                       }
