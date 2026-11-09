@@ -16,6 +16,7 @@ import { RolesGuard } from "@/common/guards/roles.guard"
 import { Roles } from "@/common/decorators/roles.decorator"
 import { UserRole } from "@prisma/client"
 import { CreateCondominiumAddressDto, UpdateCondominiumAddressDto } from "./dto/condominium-address.dto"
+import { UpdateCondominiumProfileDto } from "./dto/update-condo-profile.dto"
 
 @Controller("condominium")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,7 +31,7 @@ export class CondominiumController {
 
   @Put("profile")
   @Roles(UserRole.ADMIN)
-  async updateProfile(@Body() body: { name?: string; cnpj?: string }) {
+  async updateProfile(@Body() body: UpdateCondominiumProfileDto) {
     return this.condominiumService.updateProfile(body)
   }
 
