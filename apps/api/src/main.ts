@@ -31,7 +31,10 @@ async function bootstrap() {
     "http://127.0.0.1:3000",
     /^http:\/\/192\.168\.\d+\.\d+:3000$/,
     /^http:\/\/10\.\d+\.\d+\.\d+:3000$/,
-    /^https:\/\/chegou-ai.*\.vercel\.app$/,
+    "https://chegou-ai.vercel.app",
+    "https://chegou.ai",
+    "https://www.chegou.ai",
+    /^https:\/\/chegou-ai(-[a-zA-Z0-9]+)?-erosmarianos-projects\.vercel\.app$/,
   ]
 
   if (process.env.FRONTEND_URL) {
