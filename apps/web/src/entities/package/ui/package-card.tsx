@@ -2,23 +2,28 @@ import React from "react"
 import { StatusBadge } from "@/shared/ui/status-badge"
 import { UnitBadge } from "@/entities/unit/ui/unit-badge"
 import { PackageItem } from "@/entities/package/model/types"
-import { Truck, Clock, Sparkles } from "lucide-react"
+import { Truck, Clock, Sparkles, Ban } from "lucide-react"
+import { Button } from "@/shared/ui/button"
 
 interface PackageCardProps {
   packageItem: PackageItem
   onClick?: () => void
+  onCancel?: (pkg: PackageItem) => void
 }
 
-export function PackageCard({ packageItem, onClick }: PackageCardProps) {
+export function PackageCard({ packageItem, onClick, onCancel }: PackageCardProps) {
   const formattedTime = new Date(packageItem.receivedAt).toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
   })
 
+  const canCancel =
+    (packageItem.status === "RECEIVED" || packageItem.status === "NOTIFIED") && !!onCancel
+
   return (
     <div
       onClick={onClick}
-      className="rounded-lg border border-zinc-200/90 bg-white p-5 shadow-2xs hover:border-zinc-400 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between space-y-3.5 group"
+      className="rounded-lg border border-zinc-200/90 bg-white p-5 shadow-2xs hover:border-zinc-400 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between space-y-3.5 group relative"
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -32,7 +37,24 @@ export function PackageCard({ packageItem, onClick }: PackageCardProps) {
             </span>
           )}
         </div>
-        <StatusBadge status={packageItem.status} />
+        <div className="flex items-center gap-1.5">
+          <StatusBadge status={packageItem.status} />
+          {canCancel && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={(e) => {
+                e.stopPropagation()
+                onCancel(packageItem)
+              }}
+              className="size-6 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 p-0"
+              title="Cancelar ou devolver pacote"
+            >
+              <Ban className="size-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
 
       <div>

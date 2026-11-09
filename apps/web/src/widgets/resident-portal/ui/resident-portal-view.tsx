@@ -100,6 +100,16 @@ export function ResidentPortalView({ initialPackages }: ResidentPortalViewProps)
 
   // Encomendas já entregues
   const deliveredPackages = packages.filter((p) => p.status === "DELIVERED")
+  const pendingPackages = packages.filter(
+    (p) => p.status === "RECEIVED" || p.status === "NOTIFIED" || p.status === "NOTIFICATION_FAILED"
+  )
+  const [filterTab, setFilterTab] = useState<"ALL" | "PENDING" | "DELIVERED">("ALL")
+
+  const displayedPackages = packages.filter((p) => {
+    if (filterTab === "PENDING") return p.status === "RECEIVED" || p.status === "NOTIFIED" || p.status === "NOTIFICATION_FAILED"
+    if (filterTab === "DELIVERED") return p.status === "DELIVERED"
+    return true
+  })
 
   const residentName = user?.name || "Morador"
   const residentBlock = user?.unit?.block || ""
@@ -202,22 +212,55 @@ export function ResidentPortalView({ initialPackages }: ResidentPortalViewProps)
 
       {/* Histórico de Encomendas da Unidade */}
       <div className="space-y-3 pt-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
             Histórico da Unidade ({packages.length})
           </h2>
-          <span className="text-[11px] font-semibold text-zinc-400">
-            {deliveredPackages.length} entregue(s) &bull; {packages.length - deliveredPackages.length} pendente(s)
-          </span>
+
+          <div className="flex items-center bg-zinc-100 p-0.5 rounded-lg border border-zinc-200/80 text-xs">
+            <button
+              type="button"
+              onClick={() => setFilterTab("ALL")}
+              className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                filterTab === "ALL"
+                  ? "bg-white text-zinc-950 shadow-2xs"
+                  : "text-zinc-500 hover:text-zinc-900"
+              }`}
+            >
+              Todas ({packages.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab("PENDING")}
+              className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                filterTab === "PENDING"
+                  ? "bg-white text-zinc-950 shadow-2xs"
+                  : "text-zinc-500 hover:text-zinc-900"
+              }`}
+            >
+              Pendentes ({pendingPackages.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab("DELIVERED")}
+              className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                filterTab === "DELIVERED"
+                  ? "bg-white text-zinc-950 shadow-2xs"
+                  : "text-zinc-500 hover:text-zinc-900"
+              }`}
+            >
+              Entregues ({deliveredPackages.length})
+            </button>
+          </div>
         </div>
 
-        {packages.length === 0 ? (
-          <p className="text-xs text-zinc-400 text-center py-6">
-            Nenhuma encomenda registrada para esta unidade ainda.
+        {displayedPackages.length === 0 ? (
+          <p className="text-xs text-zinc-400 text-center py-6 bg-white rounded-lg border border-zinc-200/80">
+            Nenhuma encomenda encontrada neste filtro.
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {packages.map((pkg) => (
+            {displayedPackages.map((pkg) => (
               <PackageCard key={pkg.id} packageItem={pkg} />
             ))}
           </div>

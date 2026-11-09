@@ -13,6 +13,7 @@ import {
   SelectItem,
 } from "@/shared/ui/select"
 import { Clock, PackageCheck, Layers, Search, Filter, ArrowUpRight, Inbox } from "lucide-react"
+import { CancelPackageDialog } from "@/features/cancel-package/ui/cancel-package-dialog"
 
 interface PackageTableWidgetProps {
   initialPackages: PackageItem[]
@@ -22,6 +23,8 @@ export function PackageTableWidget({ initialPackages }: PackageTableWidgetProps)
   const [packages, setPackages] = useState<PackageItem[]>(initialPackages)
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState("ALL")
+  const [packageToCancel, setPackageToCancel] = useState<PackageItem | null>(null)
+  const [isCancelOpen, setIsCancelOpen] = useState(false)
 
   useEffect(() => {
     packagePort.listPackages().then((items) => {
@@ -197,10 +200,26 @@ export function PackageTableWidget({ initialPackages }: PackageTableWidgetProps)
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((pkg) => (
-            <PackageCard key={pkg.id} packageItem={pkg} />
+            <PackageCard
+              key={pkg.id}
+              packageItem={pkg}
+              onCancel={(targetPkg) => {
+                setPackageToCancel(targetPkg)
+                setIsCancelOpen(true)
+              }}
+            />
           ))}
         </div>
       )}
+
+      <CancelPackageDialog
+        packageItem={packageToCancel}
+        open={isCancelOpen}
+        onOpenChange={setIsCancelOpen}
+        onSuccess={(updated) => {
+          setPackages((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+        }}
+      />
     </div>
   )
 }
