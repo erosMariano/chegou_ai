@@ -2,11 +2,12 @@
 
 import React, { useRef } from "react"
 import { BorderBeam } from "@/shared/ui/border-beam"
-import { Camera, Sparkles, CheckCircle2, Upload, RefreshCw } from "lucide-react"
+import { Camera, Sparkles, CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react"
 
 interface ScannerHeroProps {
   isScanning: boolean
   hasExtracted: boolean
+  isAddressMismatch?: boolean
   previewUrl: string | null
   onCaptureImage: (base64Image: string, mimeType: string) => void
   onSimulateScan: () => void
@@ -15,6 +16,7 @@ interface ScannerHeroProps {
 export function ScannerHero({
   isScanning,
   hasExtracted,
+  isAddressMismatch,
   previewUrl,
   onCaptureImage,
   onSimulateScan,
@@ -92,9 +94,13 @@ export function ScannerHero({
         ) : (
           <div
             onClick={handleOpenPicker}
-            className="size-14 rounded-lg bg-zinc-900 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform cursor-pointer"
+            className={`size-14 rounded-lg flex items-center justify-center shadow-md group-hover:scale-105 transition-transform cursor-pointer ${
+              isAddressMismatch ? "bg-red-950 text-white" : "bg-zinc-900 text-white"
+            }`}
           >
-            {hasExtracted ? (
+            {isAddressMismatch ? (
+              <AlertTriangle className="size-7 text-red-400 animate-in zoom-in-50" />
+            ) : hasExtracted ? (
               <CheckCircle2 className="size-7 text-[#E1FF01] animate-in zoom-in-50" />
             ) : isScanning ? (
               <Sparkles className="size-7 text-[#E1FF01] animate-spin" />
@@ -105,9 +111,15 @@ export function ScannerHero({
         )}
 
         <div className="space-y-1">
-          <h4 className="font-extrabold text-zinc-950 text-base sm:text-lg">
+          <h4
+            className={`font-extrabold text-base sm:text-lg ${
+              isAddressMismatch ? "text-red-600" : "text-zinc-950"
+            }`}
+          >
             {isScanning
               ? "Gemini 2.5 Flash analisando etiqueta..."
+              : isAddressMismatch
+              ? "Endereço Divergente Identificado!"
               : hasExtracted
               ? "Etiqueta Lida com Sucesso!"
               : "Fotografar Etiqueta da Encomenda"}
@@ -115,6 +127,8 @@ export function ScannerHero({
           <p className="text-xs text-zinc-500">
             {isScanning
               ? "Processando foto em memória RAM via Google Gemini Vision (LGPD estrita: sem gravação em disco)."
+              : isAddressMismatch
+              ? "A IA identificou que o endereço da etiqueta não pertence a este condomínio. Os dados da encomenda não foram preenchidos."
               : hasExtracted
               ? "Dados extraídos pela IA. Revise o destinatário e a unidade abaixo antes de salvar."
               : "Aponte a câmera para a etiqueta ou envie uma foto. A IA extrairá destinatário, unidade e rastreio."}

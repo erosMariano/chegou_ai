@@ -80,47 +80,70 @@ export function ScanForm({ units }: ScanFormProps) {
       setIsScanning(true)
       const res = await packagePort.extractLabel(base64Image, mimeType)
 
-      if (res.extracted.recipientName) {
-        setValue("recipientNameRaw", res.extracted.recipientName, { shouldValidate: true })
-      }
-      if (res.extracted.carrier) {
-        setValue("carrier", res.extracted.carrier, { shouldValidate: true })
-      }
-      if (res.extracted.trackingCode) {
-        setValue("trackingCode", res.extracted.trackingCode, { shouldValidate: true })
-      }
-
-      setValue("aiConfidenceScore", res.confidenceScore)
-      setAiScore(res.confidenceScore)
+      const isMismatch = res.addressValidation?.isMatch === false
 
       if (res.addressValidation) {
         setAddressValidation(res.addressValidation)
+      } else {
+        setAddressValidation(null)
       }
 
-      if (res.matchedUnitId) {
-        setValue("unitId", res.matchedUnitId, { shouldValidate: true })
-      } else if (res.extracted.unitNumber) {
-        const targetBlock = (res.extracted.unitBlock || "").toUpperCase().replace(/BLOCO|TORRE/gi, "").trim()
-        const targetNumber = res.extracted.unitNumber.trim()
-        const found = unitsList.find((u) => {
-          const uBlock = u.block.toUpperCase().replace(/BLOCO|TORRE/gi, "").trim()
-          return u.number === targetNumber && (!targetBlock || uBlock === targetBlock || uBlock === "UNICO")
+      setAiScore(res.confidenceScore)
+
+      if (isMismatch) {
+        // REGRA DE SEGURANÇA: Se a IA identificar que a etiqueta é de um endereço diferente,
+        // NÃO deve preencher os campos de dados da encomenda (e limpa valores existentes)
+        setValue("recipientNameRaw", "", { shouldValidate: true })
+        setValue("carrier", "", { shouldValidate: true })
+        setValue("trackingCode", "", { shouldValidate: true })
+        setValue("unitId", "", { shouldValidate: true })
+        setValue("aiConfidenceScore", null)
+
+        toast.error("Alerta: Endereço Divergente!", {
+          description:
+            res.addressValidation?.mismatchReason ||
+            "A encomenda possui endereço diferente deste condomínio. Os dados da encomenda não foram preenchidos.",
+          duration: 6000,
         })
-        if (found) {
-          setValue("unitId", found.id, { shouldValidate: true })
+      } else {
+        if (res.extracted.recipientName) {
+          setValue("recipientNameRaw", res.extracted.recipientName, { shouldValidate: true })
+        }
+        if (res.extracted.carrier) {
+          setValue("carrier", res.extracted.carrier, { shouldValidate: true })
+        }
+        if (res.extracted.trackingCode) {
+          setValue("trackingCode", res.extracted.trackingCode, { shouldValidate: true })
+        }
+
+        setValue("aiConfidenceScore", res.confidenceScore)
+
+        if (res.matchedUnitId) {
+          setValue("unitId", res.matchedUnitId, { shouldValidate: true })
+        } else if (res.extracted.unitNumber) {
+          const targetBlock = (res.extracted.unitBlock || "").toUpperCase().replace(/BLOCO|TORRE/gi, "").trim()
+          const targetNumber = res.extracted.unitNumber.trim()
+          const found = unitsList.find((u) => {
+            const uBlock = u.block.toUpperCase().replace(/BLOCO|TORRE/gi, "").trim()
+            return u.number === targetNumber && (!targetBlock || uBlock === targetBlock || uBlock === "UNICO")
+          })
+          if (found) {
+            setValue("unitId", found.id, { shouldValidate: true })
+          }
+        }
+
+        const scorePct = Math.round(res.confidenceScore * 100)
+        if (res.confidenceScore >= 0.8) {
+          toast.success("Etiqueta analisada com sucesso via Gemini 2.5 Flash!", {
+            description: `Confiança: ${scorePct}% em ${res.processingTimeMs}ms`,
+          })
+        } else {
+          toast.warning("Atenção: Confiança da leitura abaixo de 80%", {
+            description: `A IA identificou ${scorePct}%. Por favor revise o destinatário e a unidade abaixo.`,
+          })
         }
       }
 
-      const scorePct = Math.round(res.confidenceScore * 100)
-      if (res.confidenceScore >= 0.8) {
-        toast.success("Etiqueta analisada com sucesso via Gemini 2.5 Flash!", {
-          description: `Confiança: ${scorePct}% em ${res.processingTimeMs}ms`,
-        })
-      } else {
-        toast.warning("Atenção: Confiança da leitura abaixo de 80%", {
-          description: `A IA identificou ${scorePct}%. Por favor revise o destinatário e a unidade abaixo.`,
-        })
-      }
       setActiveStep(2)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Erro ao processar extração por IA"
@@ -215,6 +238,7 @@ export function ScanForm({ units }: ScanFormProps) {
       <ScannerHero
         isScanning={isScanning}
         hasExtracted={aiScore !== null}
+        isAddressMismatch={addressValidation?.isMatch === false}
         previewUrl={previewUrl}
         onCaptureImage={handleCaptureImage}
         onSimulateScan={handleSimulateScan}
