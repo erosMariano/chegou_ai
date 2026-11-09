@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/entities/user/ui/auth-provider"
 import { UserRole } from "@/shared/ports/IAuthGateway"
@@ -185,10 +186,25 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full h-10 rounded-lg bg-zinc-900 hover:bg-black text-white font-semibold text-xs shadow-xs"
+                className="w-full h-10 rounded-full bg-zinc-900 hover:bg-black text-white font-bold text-xs shadow-xs"
               >
                 {isSubmitting ? "Autenticando..." : "Entrar no Sistema"}
               </Button>
+
+              <div className="pt-2 flex items-center justify-between text-[11px] text-zinc-500 font-medium">
+                <Link
+                  href="/esqueci-minha-senha"
+                  className="hover:text-zinc-900 transition-colors"
+                >
+                  Esqueceu a senha?
+                </Link>
+                <Link
+                  href="/ativar-conta"
+                  className="text-zinc-800 font-bold hover:underline"
+                >
+                  Primeiro acesso? Ativar conta
+                </Link>
+              </div>
             </form>
           </CardContent>
         </Card>
