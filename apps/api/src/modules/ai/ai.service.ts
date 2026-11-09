@@ -1,4 +1,9 @@
-import { Injectable, Logger } from "@nestjs/common"
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  UnprocessableEntityException,
+} from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { PrismaService } from "@/prisma/prisma.service"
 import { AddressMatcherService, AddressValidationResult } from "./address-matcher.service"
@@ -40,18 +45,40 @@ export class AiService {
     const startTime = Date.now()
     const apiKey = this.config.get<string>("GEMINI_API_KEY")
 
+    if (!imageBase64 || imageBase64.trim() === "") {
+      throw new BadRequestException("Nenhuma imagem fornecida. Por favor, capture ou selecione uma foto da etiqueta.")
+    }
+
+    if (!apiKey || apiKey.trim() === "") {
+      this.logger.error("GEMINI_API_KEY não configurada no servidor.")
+      throw new BadRequestException("Serviço de IA indisponível: chave GEMINI_API_KEY não configurada no servidor.")
+    }
+
     let extracted: ExtractedLabelData
 
-    if (apiKey && apiKey.trim() !== "" && imageBase64 && imageBase64.trim() !== "") {
-      try {
-        extracted = await this.callGeminiVision(imageBase64, mimeType, apiKey)
-      } catch (err: any) {
-        this.logger.error(`Erro ao chamar Gemini 2.5 Flash: ${err.message}. Ativando fallback heurístico em memória.`)
-        extracted = this.fallbackExtraction()
-      }
-    } else {
-      this.logger.log("Imagem vazia ou GEMINI_API_KEY não configurada. Executando simulação de extração inteligente.")
-      extracted = this.fallbackExtraction()
+    try {
+      extracted = await this.callGeminiVision(imageBase64, mimeType, apiKey)
+    } catch (err: any) {
+      this.logger.error(`Falha ao processar etiqueta via Gemini: ${err.message}`)
+      throw new UnprocessableEntityException(
+        "Não foi possível ler a etiqueta. Por favor, aproxime a câmera e tire uma foto mais nítida e bem iluminada."
+      )
+    }
+
+    // Se a IA não conseguiu extrair nenhum dado relevante da imagem (foto borrada, escura ou sem etiqueta legível)
+    const hasAnyUsefulData = Boolean(
+      (extracted.recipientName && extracted.recipientName.trim()) ||
+      (extracted.unitNumber && extracted.unitNumber.trim()) ||
+      (extracted.trackingCode && extracted.trackingCode.trim()) ||
+      (extracted.extractedStreet && extracted.extractedStreet.trim()) ||
+      (extracted.extractedZipCode && extracted.extractedZipCode.trim())
+    )
+
+    if (!hasAnyUsefulData) {
+      this.logger.warn("A IA não conseguiu identificar dados legíveis da etiqueta na imagem.")
+      throw new UnprocessableEntityException(
+        "A etiqueta não pôde ser identificada na foto. Por favor, enquadre a etiqueta de perto em um ambiente bem iluminado e tente novamente."
+      )
     }
 
     // Entity matching com o banco de unidades do PostgreSQL
@@ -144,7 +171,7 @@ Retorne um JSON estrito com os seguintes campos:
 - confidenceScore (número entre 0.0 e 1.0)
 - uncertaintyReason (string ou null se confidenceScore < 0.8)`
 
-    const model = this.config.get<string>("AI_MODEL_VISION") || this.config.get<string>("GEMINI_MODEL") || "gemini-3.5-flash"
+    const model = this.config.get<string>("AI_MODEL_VISION") || this.config.get<string>("GEMINI_MODEL") || "gemini-2.5-flash"
     this.logger.log(`Invocando Gemini Vision com o modelo: ${model}`)
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -187,23 +214,8 @@ Retorne um JSON estrito com os seguintes campos:
       throw new Error("Resposta vazia da API do Gemini")
     }
 
-    return JSON.parse(text)
-  }
-
-  private fallbackExtraction(): ExtractedLabelData {
-    return {
-      recipientName: "Mariana Costa Silva",
-      unitBlock: "B",
-      unitNumber: "402",
-      trackingCode: `BR${Math.floor(100000000 + Math.random() * 900000000)}ML`,
-      carrier: "Mercado Livre",
-      extractedStreet: "Avenida das Américas",
-      extractedNumber: "1500",
-      extractedZipCode: "22640101",
-      extractedCity: "Rio de Janeiro",
-      confidenceScore: 0.94,
-      uncertaintyReason: null,
-    }
+    const cleanText = text.replace(/^```json\s*/i, "").replace(/\s*```$/, "").trim()
+    return JSON.parse(cleanText)
   }
 }
 
