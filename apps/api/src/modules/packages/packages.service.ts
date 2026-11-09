@@ -424,7 +424,7 @@ export class PackagesService {
         data: {
           status: PackageStatus.CANCELLED,
           pickupPinHash: await bcrypt.hash(`CANCELLED_${Date.now()}`, 10),
-          pickupQrToken: `CANCELLED_${randomUUID()}`,
+          pickupQrToken: randomUUID(), // Invalida o token gerando um novo UUID aleatório inacessível
           version: { increment: 1 },
         },
         include: { unit: true },
