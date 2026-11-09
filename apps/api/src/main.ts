@@ -1,5 +1,6 @@
 import { NestFactory } from "@nestjs/core"
 import { ValidationPipe, Logger } from "@nestjs/common"
+import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger"
 import { AppModule } from "./app.module"
 import { Rfc7807ExceptionFilter } from "./common/filters/rfc7807-exception.filter"
 import helmet from "helmet"
@@ -76,9 +77,56 @@ async function bootstrap() {
     })
   )
 
-  logger.log("3. Middleware, CORS, filtros e pipes configurados.")
-
   const port = process.env.PORT || 8080
+
+  // Configuração do Swagger / OpenAPI (Ativo em desenvolvimento ou com flag explícita)
+  const isSwaggerEnabled =
+    process.env.NODE_ENV !== "production" || process.env.SWAGGER_ENABLED === "true"
+
+  if (isSwaggerEnabled) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle("Chegou.AI — Core API")
+      .setDescription(
+        "Documentação oficial da API do Chegou.AI para gestão inteligente de portaria, notificações push e encomendas condominiais com visão computacional (Gemini)."
+      )
+      .setVersion("1.0.0")
+      .addBearerAuth(
+        {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          name: "Authorization",
+          description: "Insira o token JWT gerado no login (Bearer <token>)",
+          in: "header",
+        },
+        "JWT-auth"
+      )
+      .addTag("Auth", "Autenticação, primeiro acesso, setup inicial e redefinição de senha")
+      .addTag("Condominium", "Perfil institucional e gestão de endereços oficiais do condomínio")
+      .addTag("Users", "Gestão de operadores da portaria e equipe administrativa")
+      .addTag("Units", "Gestão de blocos e apartamentos")
+      .addTag("Residents", "Cadastro de moradores, links de convite e inscrições Web Push")
+      .addTag("Packages", "Custódia, check-in, check-out atômico com PIN/QR e cancelamento")
+      .addTag("BFF / AI", "Extração zero-shot de etiquetas via Gemini com validação de endereço")
+      .addTag("Audit", "Trilha imutável de eventos, métricas de SLA e exportação CSV")
+      .build()
+
+    const document = SwaggerModule.createDocument(app, swaggerConfig)
+    SwaggerModule.setup("api/docs", app, document, {
+      customSiteTitle: "Chegou.AI — API Documentation",
+      swaggerOptions: {
+        persistAuthorization: true,
+        filter: true,
+        tagsSorter: "alpha",
+        operationsSorter: "alpha",
+      },
+    })
+    logger.log(`📚 Swagger UI disponível em: http://localhost:${port}/api/docs`)
+    logger.log(`📄 Especificação OpenAPI JSON em: http://localhost:${port}/api/docs-json`)
+  }
+
+  logger.log("3. Middleware, CORS, filtros, pipes e Swagger configurados.")
+
   await app.listen(port, "0.0.0.0")
   logger.log(`4. 🚀 Chegou.AI Core API iniciado com sucesso na porta ${port}`)
   logger.log(`🔗 API Base URL: http://localhost:${port}/api/v1`)
