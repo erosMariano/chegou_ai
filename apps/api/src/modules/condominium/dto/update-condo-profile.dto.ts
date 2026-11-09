@@ -46,3 +46,4 @@ export class UpdateCondominiumProfileDto {
   @MaxLength(20)
   zipCode?: string
 }
+
