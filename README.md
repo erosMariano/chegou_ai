@@ -203,4 +203,15 @@ npm --prefix apps/api run start:dev
 npm --prefix apps/web run dev
 ```
 
+### 6. Zerar Banco e Redis (Começar Condomínio do Zero)
+Para resetar totalmente o banco de dados PostgreSQL e o cache do Redis para iniciar um condomínio limpo:
+```bash
+npm run db:clean
+```
+
+E caso queira recarregar os dados de demonstração:
+```bash
+npm run db:seed
+```
+
 Acesse a aplicação em `http://localhost:3000` e a documentação Swagger em `http://localhost:8080/api/docs`.

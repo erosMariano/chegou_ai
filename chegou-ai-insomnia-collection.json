@@ -1,0 +1,1179 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-11-09T19:35:45.181Z",
+  "__export_source": "insomnia.desktop.app:v8.6.1",
+  "resources": [
+    {
+      "_id": "wrk_chegou_ai",
+      "_type": "workspace",
+      "parentId": "__WORKSPACE_ID__",
+      "name": "Chegou.AI — Core API Collection",
+      "description": "Coleção completa de endpoints para gestão de encomendas, portaria e moradores do Chegou.AI",
+      "scope": "collection"
+    },
+    {
+      "_id": "env_chegou_ai",
+      "_type": "environment",
+      "parentId": "wrk_chegou_ai",
+      "name": "Desenvolvimento Local",
+      "data": {
+        "base_url": "http://localhost:8080",
+        "token": "",
+        "unit_id": "",
+        "resident_id": "",
+        "package_id": ""
+      },
+      "dataPropertyOrder": {
+        "&": [
+          "base_url",
+          "token",
+          "unit_id",
+          "resident_id",
+          "package_id"
+        ]
+      },
+      "color": "#E1FF01",
+      "isPrivate": false
+    },
+    {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "parentId": "wrk_chegou_ai",
+      "name": "1. Autenticação & Acesso (Auth)",
+      "description": "Login, tokens, setup inicial e recuperação de senhas"
+    },
+    {
+      "_id": "req_auth_login",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Login com E-mail e Senha",
+      "description": "Autentica usuário e retorna token JWT",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/auth/login",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"sindico@chegou.ai\",\n  \"password\": \"SenhaSegura@123\"\n}"
+      },
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_auth_demo_admin",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Login Rápido Demo (Síndico)",
+      "description": "Login demo sem senha para ambiente de desenvolvimento",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/auth/demo/admin",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_auth_demo_porter",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Login Rápido Demo (Porteiro)",
+      "description": "Login demo como porteiro",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/auth/demo/porter",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_auth_demo_resident",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Login Rápido Demo (Morador)",
+      "description": "Login demo como morador",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/auth/demo/resident",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_auth_setup_initial",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Setup Inicial do Condomínio & Síndico",
+      "description": "Cria condomínio e primeiro síndico quando o banco está zerado",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/auth/setup-initial-admin",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"condominiumName\": \"Condomínio Residencial Jardins do Sol\",\n  \"cnpj\": \"12.345.678/0001-90\",\n  \"name\": \"Roberto Almeida (Síndico)\",\n  \"email\": \"sindico@chegou.ai\",\n  \"password\": \"SenhaSegura@123\"\n}"
+      },
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_auth_me",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Perfil do Usuário Autenticado",
+      "description": "Retorna dados e permissões do token atual",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/auth/me",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_auth_activate",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Ativar Conta com Token de Convite",
+      "description": "Primeiro acesso do morador definindo sua senha própria",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/auth/activate",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"mariana.costa@email.com\",\n  \"token\": \"token_recebido_no_convite\",\n  \"password\": \"MinhaNovaSenha@2026\"\n}"
+      },
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_auth_forgot",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Esqueci Minha Senha",
+      "description": "Dispara e-mail com token temporário de redefinição",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/auth/forgot-password",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"sindico@chegou.ai\"\n}"
+      },
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_auth_reset",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Redefinir Senha com Token",
+      "description": "Cadastra nova senha validando o token do Redis",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/auth/reset-password",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"sindico@chegou.ai\",\n  \"token\": \"token_temporario_recebido_por_email\",\n  \"newPassword\": \"NovaSenhaRedefinida@2026\"\n}"
+      },
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_auth_logout",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Logout",
+      "description": "Encerramento de sessão",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/auth/logout",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "fld_condo",
+      "_type": "request_group",
+      "parentId": "wrk_chegou_ai",
+      "name": "2. Condomínio & Endereços (Condominium)",
+      "description": "Configurações institucionais e endereços oficiais"
+    },
+    {
+      "_id": "req_condo_get_profile",
+      "_type": "request",
+      "parentId": "fld_condo",
+      "name": "Consultar Perfil do Condomínio",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/condominium/profile",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_condo_put_profile",
+      "_type": "request",
+      "parentId": "fld_condo",
+      "name": "Atualizar Perfil do Condomínio",
+      "description": "",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/v1/condominium/profile",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Condomínio Residencial Jardins do Sol\",\n  \"cnpj\": \"12.345.678/0001-90\"\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_condo_list_addresses",
+      "_type": "request",
+      "parentId": "fld_condo",
+      "name": "Listar Endereços Oficiais",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/condominium/addresses",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_condo_create_address",
+      "_type": "request",
+      "parentId": "fld_condo",
+      "name": "Cadastrar Endereço Oficial",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/condominium/addresses",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"label\": \"Portaria Principal\",\n  \"street\": \"Avenida das Américas\",\n  \"number\": \"1500\",\n  \"neighborhood\": \"Barra da Tijuca\",\n  \"city\": \"Rio de Janeiro\",\n  \"state\": \"RJ\",\n  \"zipCode\": \"22640101\",\n  \"addressAliases\": [\n    \"Av. das Américas\",\n    \"Av das Americas\"\n  ],\n  \"isPrimary\": true\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_condo_patch_address",
+      "_type": "request",
+      "parentId": "fld_condo",
+      "name": "Atualizar Endereço Oficial",
+      "description": "",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/v1/condominium/addresses/{{ _.address_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"label\": \"Portaria Central\",\n  \"street\": \"Avenida das Américas\",\n  \"number\": \"1500\"\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_condo_del_address",
+      "_type": "request",
+      "parentId": "fld_condo",
+      "name": "Remover Endereço Oficial",
+      "description": "",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/v1/condominium/addresses/{{ _.address_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "fld_users",
+      "_type": "request_group",
+      "parentId": "wrk_chegou_ai",
+      "name": "3. Gestão de Operadores & Usuários (Users)",
+      "description": "Cadastro de porteiros, admins e controle de acesso"
+    },
+    {
+      "_id": "req_users_list",
+      "_type": "request",
+      "parentId": "fld_users",
+      "name": "Listar Usuários (Filtros & Busca)",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/users?role=PORTER&page=1&limit=20",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_users_get_one",
+      "_type": "request",
+      "parentId": "fld_users",
+      "name": "Consultar Usuário por ID",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/users/{{ _.user_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_users_create",
+      "_type": "request",
+      "parentId": "fld_users",
+      "name": "Cadastrar Operador ou Administrador",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/users",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Carlos Silva (Porteiro)\",\n  \"email\": \"porteiro@chegou.ai\",\n  \"password\": \"PorteiroSenha@123\",\n  \"role\": \"PORTER\"\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_users_update",
+      "_type": "request",
+      "parentId": "fld_users",
+      "name": "Editar Usuário",
+      "description": "",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/v1/users/{{ _.user_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"name\": \"Carlos Silva Jr.\",\n  \"email\": \"carlos.porteiro@chegou.ai\"\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_users_toggle_status",
+      "_type": "request",
+      "parentId": "fld_users",
+      "name": "Alternar Status (Ativo / Inativo)",
+      "description": "",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/v1/users/{{ _.user_id }}/toggle-status",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_users_delete",
+      "_type": "request",
+      "parentId": "fld_users",
+      "name": "Remover Usuário",
+      "description": "",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/v1/users/{{ _.user_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "fld_units",
+      "_type": "request_group",
+      "parentId": "wrk_chegou_ai",
+      "name": "4. Unidades & Blocos (Units)",
+      "description": "Gestão de blocos e apartamentos"
+    },
+    {
+      "_id": "req_units_list",
+      "_type": "request",
+      "parentId": "fld_units",
+      "name": "Listar Unidades",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/units",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {},
+      "parameters": []
+    },
+    {
+      "_id": "req_units_get_one",
+      "_type": "request",
+      "parentId": "fld_units",
+      "name": "Consultar Unidade por ID",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/units/{{ _.unit_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_units_create",
+      "_type": "request",
+      "parentId": "fld_units",
+      "name": "Cadastrar Unidade Individual",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/units",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"block\": \"A\",\n  \"number\": \"101\"\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_units_update",
+      "_type": "request",
+      "parentId": "fld_units",
+      "name": "Editar Unidade",
+      "description": "",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/v1/units/{{ _.unit_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"block\": \"A\",\n  \"number\": \"101\",\n  \"isActive\": true\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_units_delete",
+      "_type": "request",
+      "parentId": "fld_units",
+      "name": "Remover Unidade",
+      "description": "",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/v1/units/{{ _.unit_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_units_template_csv",
+      "_type": "request",
+      "parentId": "fld_units",
+      "name": "Baixar Template CSV de Unidades",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/units/template-csv",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_units_import_batch",
+      "_type": "request",
+      "parentId": "fld_units",
+      "name": "Importar Unidades em Lote (CSV)",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/units/import-batch",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"items\": [\n    {\n      \"block\": \"A\",\n      \"number\": \"101\"\n    },\n    {\n      \"block\": \"A\",\n      \"number\": \"102\"\n    },\n    {\n      \"block\": \"B\",\n      \"number\": \"201\"\n    },\n    {\n      \"block\": \"B\",\n      \"number\": \"202\"\n    }\n  ]\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "fld_residents",
+      "_type": "request_group",
+      "parentId": "wrk_chegou_ai",
+      "name": "5. Moradores & Notificações (Residents)",
+      "description": "Cadastro de condôminos, convites e Web Push"
+    },
+    {
+      "_id": "req_residents_list",
+      "_type": "request",
+      "parentId": "fld_residents",
+      "name": "Listar Moradores",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/residents?unitId={{ _.unit_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_residents_get_one",
+      "_type": "request",
+      "parentId": "fld_residents",
+      "name": "Consultar Morador por ID",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/residents/{{ _.resident_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_residents_create",
+      "_type": "request",
+      "parentId": "fld_residents",
+      "name": "Cadastrar Morador Individual",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/residents",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"unitId\": \"{{ _.unit_id }}\",\n  \"fullName\": \"Mariana Costa Silva\",\n  \"email\": \"mariana.costa@email.com\",\n  \"phone\": \"(11) 98765-4321\",\n  \"documentLast4\": \"8392\",\n  \"isPrimary\": true\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_residents_update",
+      "_type": "request",
+      "parentId": "fld_residents",
+      "name": "Editar Morador",
+      "description": "",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/api/v1/residents/{{ _.resident_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"fullName\": \"Mariana Costa Santos\",\n  \"phone\": \"(11) 99999-8888\"\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_residents_delete",
+      "_type": "request",
+      "parentId": "fld_residents",
+      "name": "Remover Morador",
+      "description": "",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/api/v1/residents/{{ _.resident_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_residents_invite",
+      "_type": "request",
+      "parentId": "fld_residents",
+      "name": "Gerar Link de Convite",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/residents/{{ _.resident_id }}/invite",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_residents_template_csv",
+      "_type": "request",
+      "parentId": "fld_residents",
+      "name": "Baixar Template CSV de Moradores",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/residents/template-csv",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_residents_import_batch",
+      "_type": "request",
+      "parentId": "fld_residents",
+      "name": "Importar Moradores em Lote (CSV)",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/residents/import-batch",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"items\": [\n    {\n      \"block\": \"A\",\n      \"number\": \"101\",\n      \"fullName\": \"João da Silva\",\n      \"email\": \"joao.silva@email.com\",\n      \"phone\": \"(11) 91234-5678\",\n      \"isPrimary\": true\n    },\n    {\n      \"block\": \"A\",\n      \"number\": \"102\",\n      \"fullName\": \"Maria Oliveira\",\n      \"email\": \"maria.oliveira@email.com\",\n      \"phone\": \"(11) 98765-1234\",\n      \"isPrimary\": true\n    }\n  ]\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_residents_my_packages",
+      "_type": "request",
+      "parentId": "fld_residents",
+      "name": "Minhas Encomendas (Portal Morador)",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/residents/me/packages?status=PENDING",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_residents_push_sub",
+      "_type": "request",
+      "parentId": "fld_residents",
+      "name": "Registrar Web Push Subscription",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/residents/me/push-subscriptions",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"endpoint\": \"https://fcm.googleapis.com/fcm/send/exemplo-endpoint-token\",\n  \"keys\": {\n    \"p256dh\": \"BMockPublicKeyP256dh...\",\n    \"auth\": \"AMockAuthKey...\"\n  },\n  \"userAgent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64)\"\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "fld_packages",
+      "_type": "request_group",
+      "parentId": "wrk_chegou_ai",
+      "name": "6. Encomendas & Custódia (Packages)",
+      "description": "Check-in, checkout por PIN/QR e devolução"
+    },
+    {
+      "_id": "req_packages_checkin",
+      "_type": "request",
+      "parentId": "fld_packages",
+      "name": "Check-in de Encomenda (Portaria)",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/packages",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "name": "idempotency-key",
+          "value": "checkin-pack-001"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"unitId\": \"{{ _.unit_id }}\",\n  \"recipientNameRaw\": \"Mariana Costa Silva\",\n  \"carrier\": \"Amazon\",\n  \"trackingCode\": \"AMZ123456789BR\",\n  \"aiConfidenceScore\": 0.95\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_packages_checkout",
+      "_type": "request",
+      "parentId": "fld_packages",
+      "name": "Baixa / Retirada por PIN ou QR Code",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/packages/checkout",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"packageId\": \"{{ _.package_id }}\",\n  \"code\": \"839201\",\n  \"codeType\": \"PIN\"\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_packages_list",
+      "_type": "request",
+      "parentId": "fld_packages",
+      "name": "Listar Encomendas (Filtros & Busca)",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/packages?status=RECEIVED&search=Amazon&page=1&limit=20",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_packages_get_one",
+      "_type": "request",
+      "parentId": "fld_packages",
+      "name": "Consultar Encomenda por ID",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/packages/{{ _.package_id }}",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_packages_cancel",
+      "_type": "request",
+      "parentId": "fld_packages",
+      "name": "Cancelar ou Devolver à Transportadora",
+      "description": "",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/api/v1/packages/{{ _.package_id }}/cancel",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"reason\": \"CARRIER_RETURN\",\n  \"notes\": \"Destinatário ausente / Recusado na portaria\"\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "fld_ai",
+      "_type": "request_group",
+      "parentId": "wrk_chegou_ai",
+      "name": "7. Visão Computacional / IA (BFF Packages)",
+      "description": "OCR de etiquetas via Gemini Flash"
+    },
+    {
+      "_id": "req_ai_extract_label",
+      "_type": "request",
+      "parentId": "fld_ai",
+      "name": "Extrair Dados de Etiqueta via IA",
+      "description": "",
+      "method": "POST",
+      "url": "{{ _.base_url }}/api/v1/bff/packages/extract-label",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"image\": \"data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD...\",\n  \"mimeType\": \"image/jpeg\"\n}"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "fld_audit",
+      "_type": "request_group",
+      "parentId": "wrk_chegou_ai",
+      "name": "8. Auditoria & Relatórios (Audit)",
+      "description": "Trilha append-only, SLAs e exportação de CSV"
+    },
+    {
+      "_id": "req_audit_events",
+      "_type": "request",
+      "parentId": "fld_audit",
+      "name": "Listar Eventos de Custódia (Trilha)",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/audit/events?page=1&limit=50",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_audit_metrics",
+      "_type": "request",
+      "parentId": "fld_audit",
+      "name": "Métricas Operacionais & SLAs",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/audit/metrics",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    },
+    {
+      "_id": "req_audit_export",
+      "_type": "request",
+      "parentId": "fld_audit",
+      "name": "Exportar Relatório CSV de Auditoria",
+      "description": "",
+      "method": "GET",
+      "url": "{{ _.base_url }}/api/v1/audit/export",
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "body": {},
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.token }}",
+        "prefix": "Bearer"
+      },
+      "parameters": []
+    }
+  ]
+}
