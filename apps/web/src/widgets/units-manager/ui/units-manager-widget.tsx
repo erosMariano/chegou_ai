@@ -23,7 +23,9 @@ import {
   Trash2,
   X,
   ArrowUpRight,
+  FileSpreadsheet,
 } from "lucide-react"
+import { BatchImportDialog } from "@/features/batch-import/ui/batch-import-dialog"
 
 interface UnitsManagerWidgetProps {
   initialUnits: Unit[]
@@ -48,6 +50,7 @@ export function UnitsManagerWidget({ initialUnits, residentCounts }: UnitsManage
 
   // Modal / Drawer state
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isBatchImportOpen, setIsBatchImportOpen] = useState(false)
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null)
   const [block, setBlock] = useState("")
   const [number, setNumber] = useState("")
@@ -216,13 +219,22 @@ export function UnitsManagerWidget({ initialUnits, residentCounts }: UnitsManage
             <h4 className="text-base font-bold text-zinc-950">Adicione blocos e aptos</h4>
             <p className="text-xs text-zinc-400">Cadastre para liberar o check-in de pacotes</p>
           </div>
-          <div className="pt-4 mt-2 border-t border-zinc-100">
+          <div className="pt-4 mt-2 border-t border-zinc-100 flex items-center gap-2">
             <Button
               onClick={openCreateModal}
-              className="w-full rounded-lg bg-zinc-900 hover:bg-black text-white font-semibold text-xs h-9 gap-1.5 shadow-xs"
+              className="flex-1 rounded-full bg-zinc-900 hover:bg-black text-white font-semibold text-xs h-9 gap-1 shadow-xs"
             >
-              <Plus className="size-4 text-[#E1FF01]" />
-              <span>Cadastrar Unidade +</span>
+              <Plus className="size-3.5 text-[#E1FF01]" />
+              <span>Nova Unidade +</span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsBatchImportOpen(true)}
+              className="rounded-full border-zinc-200 text-xs font-semibold text-zinc-700 hover:bg-zinc-100 h-9 gap-1 shadow-2xs"
+            >
+              <FileSpreadsheet className="size-3.5 text-emerald-600" />
+              <span>Importar CSV</span>
             </Button>
           </div>
         </div>
@@ -410,6 +422,16 @@ export function UnitsManagerWidget({ initialUnits, residentCounts }: UnitsManage
           </div>
         </div>
       )}
+
+      <BatchImportDialog
+        open={isBatchImportOpen}
+        onOpenChange={setIsBatchImportOpen}
+        type="UNITS"
+        onImportUnits={(items) => unitPort.importUnitsBatch(items)}
+        onSuccess={() => {
+          unitPort.listUnits().then(setUnits).catch(() => {})
+        }}
+      />
     </div>
   )
 }

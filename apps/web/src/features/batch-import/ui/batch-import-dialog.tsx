@@ -1,0 +1,320 @@
+"use client"
+
+import React, { useState, useRef } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/shared/ui/dialog"
+import { Button } from "@/shared/ui/button"
+import { toast } from "sonner"
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Download, RefreshCw } from "lucide-react"
+
+interface BatchImportDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  type: "UNITS" | "RESIDENTS"
+  onSuccess: () => void
+  onImportUnits?: (items: Array<{ block?: string; number: string }>) => Promise<{ totalReceived: number; created: number; skipped: number }>
+  onImportResidents?: (items: Array<{ block?: string; number: string; fullName: string; email: string; phone?: string; isPrimary?: boolean }>) => Promise<{ totalReceived: number; created: number; errors: string[] }>
+}
+
+export function BatchImportDialog({
+  open,
+  onOpenChange,
+  type,
+  onSuccess,
+  onImportUnits,
+  onImportResidents,
+}: BatchImportDialogProps) {
+  const [file, setFile] = useState<File | null>(null)
+  const [parsedRows, setParsedRows] = useState<any[]>([])
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [importResult, setImportResult] = useState<{
+    totalReceived: number
+    created: number
+    skipped?: number
+    errors?: string[]
+  } | null>(null)
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleDownloadTemplate() {
+    let csvContent = ""
+    let filename = ""
+    if (type === "UNITS") {
+      csvContent = "bloco,numero\nA,101\nA,102\nA,103\nB,201\nB,202\nB,203\n"
+      filename = "modelo-unidades-chegou-ai.csv"
+    } else {
+      csvContent = "bloco,numero,nome_completo,email,telefone,principal\nB,402,Mariana Costa Silva,mariana@exemplo.com,(11) 98765-4321,sim\nA,101,João da Silva,joao@exemplo.com,(11) 91234-5678,nao\n"
+      filename = "modelo-moradores-chegou-ai.csv"
+    }
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.setAttribute("download", filename)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  function parseCSV(text: string) {
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0)
+    if (lines.length < 2) {
+      toast.error("O arquivo precisa conter pelo menos o cabeçalho e uma linha de dados.")
+      return
+    }
+
+    const rows: any[] = []
+    const startIndex = 1 // Pula cabeçalho
+
+    for (let i = startIndex; i < lines.length; i++) {
+      const parts = lines[i].split(",").map((p) => p.replace(/^"|"$/g, "").trim())
+      if (type === "UNITS") {
+        if (parts.length >= 2) {
+          rows.push({ block: parts[0] || "UNICO", number: parts[1] })
+        } else if (parts.length === 1 && parts[0]) {
+          rows.push({ block: "UNICO", number: parts[0] })
+        }
+      } else {
+        if (parts.length >= 4) {
+          rows.push({
+            block: parts[0] || "UNICO",
+            number: parts[1] || "",
+            fullName: parts[2] || "",
+            email: parts[3] || "",
+            phone: parts[4] || "",
+            isPrimary: parts[5]?.toLowerCase() === "sim" || parts[5]?.toLowerCase() === "true",
+          })
+        }
+      }
+    }
+
+    setParsedRows(rows)
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0]
+    if (!selected) return
+    setFile(selected)
+    setImportResult(null)
+
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string
+      if (text) {
+        parseCSV(text)
+      }
+    }
+    reader.readAsText(selected, "UTF-8")
+    e.target.value = ""
+  }
+
+  async function handleConfirmImport() {
+    if (parsedRows.length === 0) {
+      toast.error("Nenhuma linha identificada para importar.")
+      return
+    }
+
+    try {
+      setIsProcessing(true)
+      if (type === "UNITS" && onImportUnits) {
+        const res = await onImportUnits(parsedRows)
+        setImportResult(res)
+        toast.success(`Importação concluída: ${res.created} unidades criadas!`)
+      } else if (type === "RESIDENTS" && onImportResidents) {
+        const res = await onImportResidents(parsedRows)
+        setImportResult(res)
+        toast.success(`Importação concluída: ${res.created} moradores cadastrados!`)
+      }
+      onSuccess()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro ao importar planilha"
+      toast.error(msg)
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  function handleReset() {
+    setFile(null)
+    setParsedRows([])
+    setImportResult(null)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl rounded-[24px] border border-zinc-200 bg-white p-6 shadow-xl space-y-4">
+        <DialogHeader className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <div className="size-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center">
+              <FileSpreadsheet className="size-5 text-[#E1FF01]" />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadTemplate}
+              className="rounded-full text-xs border-zinc-200 text-zinc-700 hover:bg-zinc-100"
+            >
+              <Download className="size-3.5 mr-1 text-zinc-500" />
+              Baixar Modelo CSV
+            </Button>
+          </div>
+          <DialogTitle className="text-lg font-extrabold text-zinc-950 tracking-tight">
+            Importar {type === "UNITS" ? "Unidades" : "Moradores"} em Lote
+          </DialogTitle>
+          <DialogDescription className="text-xs text-zinc-500">
+            Carregue uma planilha CSV para cadastrar dezenas ou centenas de {type === "UNITS" ? "apartamentos" : "condôminos"} instantaneamente.
+          </DialogDescription>
+        </DialogHeader>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
+        {/* Dropzone */}
+        {!file ? (
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-zinc-300 hover:border-zinc-900 rounded-[20px] bg-zinc-50/50 hover:bg-white cursor-pointer transition-all group"
+          >
+            <div className="size-12 rounded-xl bg-zinc-100 group-hover:bg-zinc-900 group-hover:text-white flex items-center justify-center mb-2 transition-colors">
+              <Upload className="size-5 text-zinc-600 group-hover:text-[#E1FF01]" />
+            </div>
+            <p className="text-xs font-bold text-zinc-800">
+              Clique para selecionar o arquivo CSV
+            </p>
+            <p className="text-[11px] text-zinc-400 mt-0.5">
+              Formato esperado: .csv delimitado por vírgulas
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3.5 bg-zinc-50 rounded-xl border border-zinc-200">
+              <div className="flex items-center gap-2.5">
+                <FileSpreadsheet className="size-4 text-emerald-600" />
+                <div>
+                  <p className="text-xs font-bold text-zinc-900">{file.name}</p>
+                  <p className="text-[11px] text-zinc-500 font-medium">
+                    {parsedRows.length} linhas de dados identificadas
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                className="text-xs text-zinc-500 hover:text-zinc-900"
+              >
+                <RefreshCw className="size-3 mr-1" /> Trocar
+              </Button>
+            </div>
+
+            {/* Preview das Primeiras Linhas */}
+            {parsedRows.length > 0 && !importResult && (
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
+                  Pré-visualização (primeiras 5 linhas)
+                </span>
+                <div className="max-h-40 overflow-y-auto rounded-xl border border-zinc-200 text-xs">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-zinc-50 text-[10px] text-zinc-400 uppercase tracking-wider sticky top-0">
+                      <tr className="border-b border-zinc-200">
+                        <th className="py-2 px-3">Bloco</th>
+                        <th className="py-2 px-3">Número</th>
+                        {type === "RESIDENTS" && (
+                          <>
+                            <th className="py-2 px-3">Nome</th>
+                            <th className="py-2 px-3">E-mail</th>
+                          </>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 font-mono text-[11px]">
+                      {parsedRows.slice(0, 5).map((r, idx) => (
+                        <tr key={idx} className="hover:bg-zinc-50/50">
+                          <td className="py-2 px-3 font-semibold text-zinc-800">{r.block}</td>
+                          <td className="py-2 px-3 text-zinc-700">{r.number}</td>
+                          {type === "RESIDENTS" && (
+                            <>
+                              <td className="py-2 px-3 font-sans text-zinc-900 font-medium">{r.fullName}</td>
+                              <td className="py-2 px-3 text-zinc-500">{r.email}</td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Resultado da Carga */}
+            {importResult && (
+              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
+                  <CheckCircle2 className="size-4 text-emerald-600" />
+                  Importação processada com sucesso!
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs pt-1 font-semibold text-emerald-800">
+                  <div>Recebidas: {importResult.totalReceived}</div>
+                  <div>Cadastradas: {importResult.created}</div>
+                  {importResult.skipped !== undefined && (
+                    <div>Já existiam: {importResult.skipped}</div>
+                  )}
+                </div>
+                {importResult.errors && importResult.errors.length > 0 && (
+                  <div className="pt-2 text-[11px] text-amber-800">
+                    <p className="font-bold">Avisos ({importResult.errors.length}):</p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      {importResult.errors.slice(0, 3).map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <DialogFooter className="pt-3 border-t border-zinc-100 flex flex-col sm:flex-row gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="rounded-full border-zinc-200 text-xs flex-1"
+          >
+            {importResult ? "Fechar" : "Cancelar"}
+          </Button>
+
+          {!importResult && (
+            <Button
+              type="button"
+              disabled={isProcessing || parsedRows.length === 0}
+              onClick={handleConfirmImport}
+              className="rounded-full bg-zinc-900 hover:bg-black text-white text-xs font-bold px-6 flex-1 shadow-xs"
+            >
+              {isProcessing ? "Importando..." : `Confirmar Carga (${parsedRows.length})`}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+

@@ -29,7 +29,11 @@ import {
   X,
   Lock,
   ArrowUpRight,
+  FileSpreadsheet,
+  KeyRound,
+  Copy,
 } from "lucide-react"
+import { BatchImportDialog } from "@/features/batch-import/ui/batch-import-dialog"
 
 interface ResidentsManagerWidgetProps {
   initialResidents: Resident[]
@@ -87,6 +91,7 @@ export function ResidentsManagerWidget({
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isBatchImportOpen, setIsBatchImportOpen] = useState(false)
   const [editingResident, setEditingResident] = useState<Resident | null>(null)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
@@ -274,13 +279,22 @@ export function ResidentsManagerWidget({
             <h4 className="text-base font-bold text-zinc-950">Vincule condôminos</h4>
             <p className="text-xs text-zinc-400">Habilita recebimento de Web Push e passes</p>
           </div>
-          <div className="pt-4 mt-2 border-t border-zinc-100">
+          <div className="pt-4 mt-2 border-t border-zinc-100 flex items-center gap-2">
             <Button
               onClick={openCreateModal}
-              className="w-full rounded-lg bg-zinc-900 hover:bg-black text-white font-semibold text-xs h-9 gap-1.5 shadow-xs"
+              className="flex-1 rounded-lg bg-zinc-900 hover:bg-black text-white font-semibold text-xs h-9 gap-1.5 shadow-xs"
             >
               <Plus className="size-4 text-[#E1FF01]" />
-              <span>Cadastrar Morador +</span>
+              <span>Novo Morador</span>
+            </Button>
+            <Button
+              onClick={() => setIsBatchImportOpen(true)}
+              variant="outline"
+              className="rounded-lg border-zinc-200 text-xs h-9 gap-1.5 px-3 hover:bg-zinc-100"
+              title="Importar moradores em lote via CSV"
+            >
+              <FileSpreadsheet className="size-4 text-emerald-600" />
+              <span className="hidden sm:inline">CSV</span>
             </Button>
           </div>
         </div>
@@ -368,6 +382,24 @@ export function ResidentsManagerWidget({
                 </span>
 
                 <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={async () => {
+                      try {
+                        const invite = await unitPort.generateResidentInvite(res.id)
+                        await navigator.clipboard.writeText(invite.inviteUrl)
+                        toast.success("Link de ativação copiado para a área de transferência!")
+                      } catch {
+                        toast.error("Não foi possível gerar link de ativação")
+                      }
+                    }}
+                    className="rounded-lg text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50"
+                    title="Copiar link de ativação da conta"
+                  >
+                    <KeyRound className="size-3.5" />
+                  </Button>
                   <Button
                     type="button"
                     variant="ghost"
@@ -544,6 +576,17 @@ export function ResidentsManagerWidget({
           </div>
         </div>
       )}
+
+      <BatchImportDialog
+        open={isBatchImportOpen}
+        onOpenChange={setIsBatchImportOpen}
+        type="RESIDENTS"
+        onSuccess={() => {
+          unitPort.listAllResidents().then((items) => {
+            if (Array.isArray(items)) setResidents(items)
+          })
+        }}
+      />
     </div>
   )
 }
