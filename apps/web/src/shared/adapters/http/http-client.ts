@@ -73,7 +73,11 @@ export async function httpGet<T>(endpoint: string, fallback?: T): Promise<T> {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      throw new Error(err.detail || err.message || `Erro ${res.status} ao consultar ${endpoint}`)
+      if (res.status === 401) {
+        throw new Error("Sua sessão expirou ou não possui autorização. Faça login novamente.")
+      }
+      const rawMessage = Array.isArray(err.message) ? err.message.join(", ") : err.message
+      throw new Error(err.detail || rawMessage || `Erro ${res.status} ao consultar ${endpoint}`)
     }
 
     return await res.json()
@@ -107,7 +111,11 @@ export async function httpPost<T>(
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      throw new Error(err.detail || err.message || `Erro ${res.status} ao enviar dados para ${endpoint}`)
+      if (res.status === 401) {
+        throw new Error("Sua sessão expirou ou não possui permissão de Administrador. Faça login novamente.")
+      }
+      const rawMessage = Array.isArray(err.message) ? err.message.join(", ") : err.message
+      throw new Error(err.detail || rawMessage || `Erro ${res.status} ao enviar dados para ${endpoint}`)
     }
 
     return await res.json()

@@ -27,7 +27,7 @@ class MockUnitAdapterImpl implements UnitPort {
   async createUnit(data: CreateUnitInput): Promise<Unit> {
     const newUnit: Unit = {
       id: generateUUID(),
-      block: data.block.trim().toUpperCase(),
+      block: (data.block || "UNICO").trim().toUpperCase(),
       number: data.number.trim(),
       isActive: data.isActive ?? true,
       createdAt: new Date().toISOString(),

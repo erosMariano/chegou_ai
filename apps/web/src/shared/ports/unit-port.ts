@@ -1,7 +1,12 @@
 import { Unit } from "@/entities/unit/model/types"
 import { Resident } from "@/entities/resident/model/types"
 
-export type CreateUnitInput = Omit<Unit, "id" | "createdAt">
+export type CreateUnitInput = {
+  block?: string
+  number: string
+  isActive?: boolean
+  condominiumId?: string
+}
 export type UpdateUnitInput = Partial<CreateUnitInput>
 
 export type CreateResidentInput = Omit<Resident, "id" | "createdAt">

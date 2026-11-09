@@ -35,6 +35,17 @@ import {
 } from "lucide-react"
 import { BatchImportDialog } from "@/features/batch-import/ui/batch-import-dialog"
 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/shared/ui/alert-dialog"
+
 interface ResidentsManagerWidgetProps {
   initialResidents: Resident[]
   units: Unit[]
@@ -100,6 +111,14 @@ export function ResidentsManagerWidget({
   const [documentLast4, setDocumentLast4] = useState("")
   const [isPrimary, setIsPrimary] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [confirmResidentDialog, setConfirmResidentDialog] = useState<{
+    isOpen: boolean
+    title: string
+    description: string
+    confirmLabel?: string
+    isDestructive?: boolean
+    onConfirm: () => void
+  } | null>(null)
 
   const unitMap = new Map(unitsList.map((u) => [u.id, u]))
 
@@ -191,16 +210,23 @@ export function ResidentsManagerWidget({
     }
   }
 
-  async function handleDelete(res: Resident) {
-    if (confirm(`Tem certeza que deseja remover o morador ${res.fullName}?`)) {
-      try {
-        await unitPort.deleteResident(res.id)
-        setResidents((prev) => prev.filter((r) => r.id !== res.id))
-        toast.success(`Morador ${res.fullName} removido!`)
-      } catch {
-        toast.error("Erro ao remover morador")
-      }
-    }
+  function handleDelete(res: Resident) {
+    setConfirmResidentDialog({
+      isOpen: true,
+      title: "Remover Morador?",
+      description: `Tem certeza que deseja remover o morador ${res.fullName}? Esta ação revogará o acesso dele e suas notificações.`,
+      confirmLabel: "Remover Morador",
+      isDestructive: true,
+      onConfirm: async () => {
+        try {
+          await unitPort.deleteResident(res.id)
+          setResidents((prev) => prev.filter((r) => r.id !== res.id))
+          toast.success(`Morador ${res.fullName} removido!`)
+        } catch {
+          toast.error("Erro ao remover morador")
+        }
+      },
+    })
   }
 
   const primaryCount = residents.filter((r) => r.isPrimary).length
@@ -595,6 +621,42 @@ export function ResidentsManagerWidget({
           })
         }}
       />
+      {/* Alert Dialog de Confirmação (shadcn) */}
+      <AlertDialog
+        open={!!confirmResidentDialog?.isOpen}
+        onOpenChange={(open) => {
+          if (!open) setConfirmResidentDialog(null)
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-base font-extrabold text-zinc-950">
+              {confirmResidentDialog?.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs text-zinc-500">
+              {confirmResidentDialog?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="pt-3 border-t border-zinc-100 flex flex-col-reverse sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => setConfirmResidentDialog(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                confirmResidentDialog?.onConfirm()
+                setConfirmResidentDialog(null)
+              }}
+              className={
+                confirmResidentDialog?.isDestructive
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-zinc-900 hover:bg-black text-white"
+              }
+            >
+              {confirmResidentDialog?.confirmLabel || "Confirmar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
