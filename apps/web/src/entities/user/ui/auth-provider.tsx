@@ -30,14 +30,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Initial load from localStorage
-    try {
-      setUser(authGateway.getCurrentSession())
-    } catch (err) {
-      console.error("[AuthProvider] Falha ao recuperar sessão local:", err)
-    } finally {
-      setIsLoading(false)
-    }
+    let isCancelled = false
+
+    // Defer initial localStorage hydration to keep effect state updates asynchronous
+    queueMicrotask(() => {
+      if (isCancelled) return
+      try {
+        setUser(authGateway.getCurrentSession())
+      } catch (err) {
+        console.error("[AuthProvider] Falha ao recuperar sessão local:", err)
+      } finally {
+        setIsLoading(false)
+      }
+    })
 
     // Listen for session changes across tabs/windows
     const unsubscribe = authGateway.subscribe((updatedSession) => {
@@ -45,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => {
+      isCancelled = true
       unsubscribe()
     }
   }, [])

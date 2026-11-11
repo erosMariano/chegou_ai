@@ -1,8 +1,22 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useSyncExternalStore } from "react"
 import { Download, Share2, PlusSquare, X, Check } from "lucide-react"
 import { Button } from "@/shared/ui/button"
+
+const emptySubscribe = () => () => {}
+
+function getIsStandaloneSnapshot(): boolean {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    // @ts-expect-error navigator.standalone exists on iOS Safari
+    Boolean(window.navigator.standalone)
+  )
+}
+
+function getIsIosSnapshot(): boolean {
+  return /iphone|ipad|ipod/.test(window.navigator.userAgent.toLowerCase())
+}
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -11,26 +25,13 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [isIos, setIsIos] = useState(false)
-  const [isStandalone, setIsStandalone] = useState(false)
+  const isIos = useSyncExternalStore(emptySubscribe, getIsIosSnapshot, () => false)
+  const isStandalone = useSyncExternalStore(emptySubscribe, getIsStandaloneSnapshot, () => false)
   const [dismissed, setDismissed] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
 
   useEffect(() => {
     if (typeof window === "undefined") return
-
-    // Verifica se já está instalado / rodando como standalone PWA
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      // @ts-expect-error navigator.standalone exists on iOS Safari
-      Boolean(window.navigator.standalone)
-
-    setIsStandalone(standalone)
-
-    // Detecta iOS
-    const userAgent = window.navigator.userAgent.toLowerCase()
-    const iosDevice = /iphone|ipad|ipod/.test(userAgent)
-    setIsIos(iosDevice)
 
     // Handler para Chrome/Edge/Android
     const handleBeforeInstallPrompt = (e: Event) => {

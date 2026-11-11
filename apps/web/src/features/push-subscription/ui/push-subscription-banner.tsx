@@ -1,10 +1,24 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useSyncExternalStore } from "react"
 import { Bell, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react"
 import { Button } from "@/shared/ui/button"
 import { toast } from "sonner"
 import { httpPost } from "@/shared/adapters/http/http-client"
+
+const emptySubscribe = () => () => {}
+
+function getIsPushSupportedSnapshot(): boolean {
+  return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window
+}
+
+function getInsecureNoticeSnapshot(): boolean {
+  return (
+    !window.isSecureContext &&
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1"
+  )
+}
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4)
@@ -20,32 +34,23 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
 export function PushSubscriptionBanner() {
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isSupported, setIsSupported] = useState(true)
-  const [insecureNotice, setInsecureNotice] = useState(false)
+  const isSupported = useSyncExternalStore(emptySubscribe, getIsPushSupportedSnapshot, () => true)
+  const insecureNotice = useSyncExternalStore(emptySubscribe, getInsecureNoticeSnapshot, () => false)
 
   const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
   useEffect(() => {
-    if (typeof window === "undefined") return
+    if (!isSupported || !("serviceWorker" in navigator)) return
 
-    const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window
-    setIsSupported(supported)
-
-    if (!window.isSecureContext && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
-      setInsecureNotice(true)
-    }
-
-    if (supported && "serviceWorker" in navigator) {
-      navigator.serviceWorker.ready
-        .then((reg) => reg.pushManager.getSubscription())
-        .then((sub) => {
-          if (sub && Notification.permission === "granted") {
-            setIsSubscribed(true)
-          }
-        })
-        .catch(() => {})
-    }
-  }, [])
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager.getSubscription())
+      .then((sub) => {
+        if (sub && Notification.permission === "granted") {
+          setIsSubscribed(true)
+        }
+      })
+      .catch(() => {})
+  }, [isSupported])
 
   async function handleSubscribe() {
     if (!vapidPublicKey) {
