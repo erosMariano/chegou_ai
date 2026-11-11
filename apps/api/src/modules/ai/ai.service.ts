@@ -41,6 +41,27 @@ export class AiService {
     private readonly addressMatcher: AddressMatcherService
   ) {}
 
+  private async buildDevSimulatedExtraction(): Promise<ExtractedLabelData> {
+    const [sampleUnit, primaryAddress] = await Promise.all([
+      this.prisma.unit.findFirst({ where: { isActive: true }, orderBy: [{ block: "asc" }, { number: "asc" }] }),
+      this.prisma.condominiumAddress.findFirst({ where: { isPrimary: true } }),
+    ])
+
+    return {
+      recipientName: "Camila Vasconcelos",
+      unitBlock: sampleUnit?.block || "Torre A",
+      unitNumber: sampleUnit?.number || "101",
+      trackingCode: "AMZ987654321BR",
+      carrier: "Amazon",
+      extractedStreet: primaryAddress?.street || "Av. Brasil",
+      extractedNumber: primaryAddress?.number || "1000",
+      extractedZipCode: primaryAddress?.zipCode || "01410000",
+      extractedCity: primaryAddress?.city || "São Paulo",
+      confidenceScore: 0.95,
+      uncertaintyReason: null,
+    }
+  }
+
   async extractLabelFromImage(imageBase64?: string, mimeType = "image/jpeg"): Promise<LabelExtractionResult> {
     const startTime = Date.now()
     const apiKey = this.config.get<string>("GEMINI_API_KEY")
@@ -49,37 +70,33 @@ export class AiService {
       throw new BadRequestException("Nenhuma imagem fornecida. Por favor, capture ou selecione uma foto da etiqueta.")
     }
 
-    if (!apiKey || apiKey.trim() === "") {
-      this.logger.error("GEMINI_API_KEY não configurada no servidor.")
-      throw new BadRequestException("Serviço de IA indisponível: chave GEMINI_API_KEY não configurada no servidor.")
-    }
+    const isSimulatedMock =
+      process.env.NODE_ENV !== "production" && imageBase64.trim().startsWith("mock")
 
     let extracted: ExtractedLabelData
 
-    try {
-      extracted = await this.callGeminiVision(imageBase64, mimeType, apiKey)
-    } catch (err: any) {
-      this.logger.warn(`Falha ao processar etiqueta via Gemini (${err.message}). Ativando fallback de esteira para desenvolvimento/teste.`)
-      
-      // Fallback inteligente de mock para testes e esteiras automatizadas
-      if (imageBase64.includes("mock") || process.env.NODE_ENV !== "production") {
-        extracted = {
-          recipientName: "Camila Vasconcelos",
-          unitBlock: "Torre A",
-          unitNumber: "101",
-          trackingCode: "AMZ987654321BR",
-          carrier: "Amazon",
-          extractedStreet: "Av. Brasil",
-          extractedNumber: "1000",
-          extractedZipCode: "01410000",
-          extractedCity: "São Paulo",
-          confidenceScore: 0.95,
-          uncertaintyReason: null,
+    if (isSimulatedMock) {
+      this.logger.log("Simulação de extração de etiqueta solicitada em ambiente de desenvolvimento.")
+      extracted = await this.buildDevSimulatedExtraction()
+    } else {
+      if (!apiKey || apiKey.trim() === "") {
+        this.logger.error("GEMINI_API_KEY não configurada no servidor.")
+        throw new BadRequestException("Serviço de IA indisponível: chave GEMINI_API_KEY não configurada no servidor.")
+      }
+
+      try {
+        extracted = await this.callGeminiVision(imageBase64, mimeType, apiKey)
+      } catch (err: any) {
+        this.logger.warn(`Falha ao processar etiqueta via Gemini (${err.message}). Ativando fallback de esteira para desenvolvimento/teste.`)
+
+        // Fallback inteligente de mock para testes e esteiras automatizadas
+        if (imageBase64.includes("mock") || process.env.NODE_ENV !== "production") {
+          extracted = await this.buildDevSimulatedExtraction()
+        } else {
+          throw new UnprocessableEntityException(
+            "Não foi possível ler a etiqueta. Por favor, aproxime a câmera e tire uma foto mais nítida e bem iluminada."
+          )
         }
-      } else {
-        throw new UnprocessableEntityException(
-          "Não foi possível ler a etiqueta. Por favor, aproxime a câmera e tire uma foto mais nítida e bem iluminada."
-        )
       }
     }
 

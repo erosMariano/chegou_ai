@@ -35,6 +35,9 @@ export function ScannerHero({
         quality: 0.82,
         mimeType: "image/jpeg",
       })
+      if (!result.base64) {
+        throw new Error("Imagem comprimida retornou vazia.")
+      }
       console.log(
         `[Chegou.AI OCR] Imagem otimizada: ${result.originalSizeKb}KB -> ${result.compressedSizeKb}KB (${result.width}x${result.height})`
       )
@@ -44,8 +47,10 @@ export function ScannerHero({
       const mimeType = file.type || "image/jpeg"
       const reader = new FileReader()
       reader.onload = () => {
-        const base64 = reader.result as string
-        onCaptureImage(base64, mimeType)
+        const base64 = reader.result
+        if (typeof base64 === "string" && base64.trim().length > 0) {
+          onCaptureImage(base64, mimeType)
+        }
       }
       reader.readAsDataURL(file)
     } finally {
