@@ -323,12 +323,28 @@ export class AuthService {
     return { success: true, message: "Senha redefinida com sucesso. Faça login com sua nova senha." }
   }
 
+  async getSetupStatus(): Promise<{ initialized: boolean }> {
+    const adminCount = await this.prisma.user.count({
+      where: { role: UserRole.ADMIN },
+    })
+    return { initialized: adminCount > 0 }
+  }
+
   async setupInitialAdmin(data: {
     condominiumName: string
     cnpj?: string
     name: string
     email: string
     password: string
+    address?: {
+      label?: string
+      zipCode: string
+      street: string
+      number: string
+      neighborhood: string
+      city: string
+      state: string
+    }
   }) {
     // 1. Lock distribuído no Redis para prevenir Race Condition / TOCTOU
     const lockKey = "lock:setup_initial_admin"
@@ -347,6 +363,14 @@ export class AuthService {
         throw new ForbiddenException(
           "O administrador inicial do condomínio já foi configurado. Acesse pelo login."
         )
+      }
+
+      const normalizedEmail = data.email.toLowerCase().trim()
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: normalizedEmail },
+      })
+      if (existingUser) {
+        throw new ConflictException("Já existe um usuário cadastrado com este e-mail.")
       }
 
       // 3. Criação ou atualização do condomínio
@@ -368,12 +392,37 @@ export class AuthService {
         })
       }
 
-      // 4. Criação do primeiro usuário administrador (Síndico)
+      // 4. Cadastro do endereço oficial principal (se informado no onboarding)
+      if (data.address) {
+        const cleanZip = data.address.zipCode.replace(/\D/g, "")
+        const cleanState = data.address.state.toUpperCase().trim()
+        const existingAddressCount = await this.prisma.condominiumAddress.count({
+          where: { condominiumId: condo.id },
+        })
+        if (existingAddressCount === 0) {
+          await this.prisma.condominiumAddress.create({
+            data: {
+              condominiumId: condo.id,
+              label: data.address.label?.trim() || "Portaria Principal",
+              zipCode: cleanZip,
+              street: data.address.street.trim(),
+              number: data.address.number.trim(),
+              neighborhood: data.address.neighborhood.trim(),
+              city: data.address.city.trim(),
+              state: cleanState,
+              addressAliases: [],
+              isPrimary: true,
+            },
+          })
+        }
+      }
+
+      // 5. Criação do primeiro usuário administrador (Síndico)
       const passwordHash = await bcrypt.hash(data.password, 10)
       const user = await this.prisma.user.create({
         data: {
           name: data.name.trim(),
-          email: data.email.toLowerCase().trim(),
+          email: normalizedEmail,
           passwordHash,
           role: UserRole.ADMIN,
           isActive: true,
