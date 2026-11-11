@@ -1,58 +1,15 @@
-"use client"
-
-import React, { useEffect, useState } from "react"
+import type { Metadata } from "next"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/entities/user/ui/auth-provider"
-import { SetupCondominiumForm } from "@/features/setup-condominium/ui/setup-condominium-form"
 import { Sparkles, ArrowLeft } from "lucide-react"
+import { SetupCondominiumGate } from "@/features/setup-condominium/ui/setup-condominium-gate"
+
+export const metadata: Metadata = {
+  title: "Criar Condomínio | Chegou.AI",
+  description:
+    "Configure o perfil do seu condomínio, endereço oficial e a conta principal do síndico.",
+}
 
 export default function CriarCondominioPage() {
-  const router = useRouter()
-  const { user, isLoading, getSetupStatus } = useAuth()
-  const [canInitialize, setCanInitialize] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    if (!isLoading && user) {
-      if (user.role === "PORTER") router.replace("/portaria")
-      else if (user.role === "RESIDENT") router.replace("/morador")
-      else if (user.role === "ADMIN") router.replace("/admin")
-      return
-    }
-
-    let isMounted = true
-    getSetupStatus()
-      .then((status) => {
-        if (!isMounted) return
-        if (status.initialized) {
-          // Condomínio já configurado: bloqueia acesso público ao onboarding
-          router.replace("/login")
-        } else {
-          setCanInitialize(true)
-        }
-      })
-      .catch(() => {
-        if (isMounted) router.replace("/login")
-      })
-
-    return () => {
-      isMounted = false
-    }
-  }, [user, isLoading, getSetupStatus, router])
-
-  if (isLoading || canInitialize !== true) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F4F4F3]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="size-10 rounded-full border-2 border-zinc-900 border-t-transparent animate-spin" />
-          <p className="text-xs font-medium text-zinc-500">
-            Verificando estado do condomínio...
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-10 bg-[#F4F4F3] text-zinc-900">
       <div className="w-full max-w-xl space-y-6">
@@ -76,7 +33,7 @@ export default function CriarCondominioPage() {
           </p>
         </div>
 
-        <SetupCondominiumForm />
+        <SetupCondominiumGate />
 
         <div className="flex flex-col items-center gap-2 pt-1">
           <Link
@@ -96,4 +53,3 @@ export default function CriarCondominioPage() {
     </div>
   )
 }
-
