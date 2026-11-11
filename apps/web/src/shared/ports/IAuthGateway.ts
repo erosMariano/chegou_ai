@@ -40,11 +40,18 @@ export interface SetupInitialAdminInput {
   }
 }
 
+export interface ActivateAccountInput {
+  email: string
+  token: string
+  password: string
+}
+
 export interface IAuthGateway {
   login(credentials: LoginCredentials): Promise<UserSession>
   loginAsDemo(role: UserRole): Promise<UserSession>
   getSetupStatus(): Promise<SetupStatus>
   setupInitialAdmin(input: SetupInitialAdminInput): Promise<UserSession>
+  activateAccount(input: ActivateAccountInput): Promise<UserSession>
   logout(): Promise<void>
   getCurrentSession(): UserSession | null
   subscribe(listener: (session: UserSession | null) => void): () => void

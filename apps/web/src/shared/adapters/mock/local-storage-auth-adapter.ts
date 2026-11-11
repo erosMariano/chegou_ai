@@ -5,6 +5,7 @@ import {
   LoginCredentials,
   SetupStatus,
   SetupInitialAdminInput,
+  ActivateAccountInput,
 } from "@/shared/ports/IAuthGateway"
 import { DEMO_USERS } from "./mock-data"
 import { mockPackageAdapter } from "./mock-package-adapter"
@@ -69,6 +70,15 @@ export class LocalStorageAuthAdapter implements IAuthGateway {
       email: input.email,
       role: "ADMIN",
       token: "mock-jwt-token",
+    }
+    this.saveSession(session)
+    return session
+  }
+
+  async activateAccount(input: ActivateAccountInput): Promise<UserSession> {
+    const session: UserSession = {
+      ...DEMO_USERS.morador.session,
+      email: input.email.trim().toLowerCase(),
     }
     this.saveSession(session)
     return session

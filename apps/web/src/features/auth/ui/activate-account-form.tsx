@@ -2,13 +2,13 @@
 
 import React, { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useAuth } from "@/entities/user/ui/auth-provider"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
 import { Card, CardContent } from "@/shared/ui/card"
 import { toast } from "sonner"
 import { Lock, CheckCircle2, ArrowRight } from "lucide-react"
-import { getApiBaseUrl } from "@/shared/adapters/http/http-client"
 
 interface ActivateAccountFieldsProps {
   initialEmail: string
@@ -17,6 +17,7 @@ interface ActivateAccountFieldsProps {
 
 function ActivateAccountFields({ initialEmail, initialToken }: ActivateAccountFieldsProps) {
   const router = useRouter()
+  const { activateAccount } = useAuth()
   const [email, setEmail] = useState(initialEmail)
   const [token, setToken] = useState(initialToken)
   const [password, setPassword] = useState("")
@@ -49,26 +50,11 @@ function ActivateAccountFields({ initialEmail, initialToken }: ActivateAccountFi
 
     try {
       setIsSubmitting(true)
-      const baseUrl = getApiBaseUrl()
-      const res = await fetch(`${baseUrl}/auth/activate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim().toLowerCase(),
-          token: token.trim(),
-          password,
-        }),
+      await activateAccount({
+        email: email.trim().toLowerCase(),
+        token: token.trim(),
+        password,
       })
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.detail || err.message || "Erro ao ativar conta.")
-      }
-
-      const session = await res.json()
-      if (session.token) {
-        localStorage.setItem("chegou_session", JSON.stringify(session))
-      }
 
       setIsSuccess(true)
       toast.success("Conta ativada com sucesso! Bem-vindo ao Chegou.AI.")
@@ -200,4 +186,3 @@ export function ActivateAccountForm() {
     />
   )
 }
-

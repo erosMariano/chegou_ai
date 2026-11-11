@@ -11,7 +11,8 @@ export function SessionHeader() {
 
   if (!user) return null
 
-  const roleConfig = {
+  const normalizedRole = typeof user.role === "string" ? user.role.toUpperCase() : ""
+  const roleMap: Record<string, { label: string; badgeClass: string; icon: typeof User }> = {
     PORTER: {
       label: "Portaria",
       badgeClass: "bg-zinc-100 text-zinc-800 border-zinc-200",
@@ -27,9 +28,17 @@ export function SessionHeader() {
       badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
       icon: ShieldCheck,
     },
-  }[user.role]
+  }
+
+  const roleConfig = roleMap[normalizedRole] ?? {
+    label: "Usuário",
+    badgeClass: "bg-zinc-100 text-zinc-700 border-zinc-200",
+    icon: User,
+  }
 
   const RoleIcon = roleConfig.icon
+  const displayName = user.name?.trim() || user.email || "Usuário"
+  const userInitial = displayName.charAt(0).toUpperCase()
 
   return (
     <header className="w-full bg-white border-b border-zinc-200/80 sticky top-0 z-30 shadow-2xs">
@@ -48,10 +57,10 @@ export function SessionHeader() {
         <div className="flex items-center gap-2.5">
           <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-zinc-50 border border-zinc-200/80">
             <div className="size-6 rounded-lg bg-zinc-200 text-zinc-700 flex items-center justify-center text-[11px] font-bold">
-              {user.name.charAt(0)}
+              {userInitial}
             </div>
             <div className="flex items-center gap-1.5 text-xs">
-              <span className="font-semibold text-zinc-900 hidden sm:inline">{user.name}</span>
+              <span className="font-semibold text-zinc-900 hidden sm:inline">{displayName}</span>
               <span
                 className={cn(
                   "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-lg border",
