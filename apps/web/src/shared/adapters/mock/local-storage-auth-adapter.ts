@@ -3,6 +3,8 @@ import {
   UserSession,
   UserRole,
   LoginCredentials,
+  SetupStatus,
+  SetupInitialAdminInput,
 } from "@/shared/ports/IAuthGateway"
 import { DEMO_USERS } from "./mock-data"
 import { mockPackageAdapter } from "./mock-package-adapter"
@@ -54,6 +56,22 @@ export class LocalStorageAuthAdapter implements IAuthGateway {
     const demo = DEMO_USERS[key]
     this.saveSession(demo.session)
     return demo.session
+  }
+
+  async getSetupStatus(): Promise<SetupStatus> {
+    return { initialized: true }
+  }
+
+  async setupInitialAdmin(input: SetupInitialAdminInput): Promise<UserSession> {
+    const session: UserSession = {
+      id: "mock-admin-id",
+      name: input.name,
+      email: input.email,
+      role: "ADMIN",
+      token: "mock-jwt-token",
+    }
+    this.saveSession(session)
+    return session
   }
 
   async logout(): Promise<void> {

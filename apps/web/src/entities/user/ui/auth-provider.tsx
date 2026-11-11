@@ -1,7 +1,13 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState } from "react"
-import { UserSession, UserRole, LoginCredentials } from "@/shared/ports/IAuthGateway"
+import {
+  UserSession,
+  UserRole,
+  LoginCredentials,
+  SetupInitialAdminInput,
+  SetupStatus,
+} from "@/shared/ports/IAuthGateway"
 import { authGateway } from "@/shared/ports"
 import { useRouter } from "next/navigation"
 
@@ -10,6 +16,8 @@ interface AuthContextType {
   isLoading: boolean
   login: (credentials: LoginCredentials) => Promise<UserSession>
   loginAsDemo: (role: UserRole) => Promise<UserSession>
+  getSetupStatus: () => Promise<SetupStatus>
+  setupInitialAdmin: (input: SetupInitialAdminInput) => Promise<UserSession>
   logout: () => Promise<void>
   resetDemoData: () => Promise<void>
 }
@@ -53,6 +61,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return session
   }
 
+  async function getSetupStatus(): Promise<SetupStatus> {
+    return authGateway.getSetupStatus()
+  }
+
+  async function setupInitialAdmin(input: SetupInitialAdminInput): Promise<UserSession> {
+    const session = await authGateway.setupInitialAdmin(input)
+    setUser(session)
+    return session
+  }
+
   async function logout(): Promise<void> {
     try {
       await authGateway.logout()
@@ -86,6 +104,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         loginAsDemo,
+        getSetupStatus,
+        setupInitialAdmin,
         logout,
         resetDemoData,
       }}
