@@ -12,24 +12,40 @@ import { Card, CardContent } from "@/shared/ui/card"
 import { DemoQuickLoginCards } from "@/shared/dev-tools/demo-quick-login-cards"
 import { isMockUiEnabled } from "@/shared/dev-tools/config"
 import { toast } from "sonner"
-import { Sparkles, Lock, Mail } from "lucide-react"
+import { Sparkles, Lock, Mail, Building2, ArrowRight } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
-  const { user, isLoading, login, loginAsDemo } = useAuth()
+  const { user, isLoading, login, loginAsDemo, getSetupStatus } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [needsInitialSetup, setNeedsInitialSetup] = useState(false)
 
-  // Redirect if already logged in
+  // Redirect if already logged in, or check if condominium onboarding is needed
   useEffect(() => {
     if (!isLoading && user) {
       if (user.role === "PORTER") router.replace("/portaria")
       else if (user.role === "RESIDENT") router.replace("/morador")
       else if (user.role === "ADMIN") router.replace("/admin")
+      return
     }
-  }, [user, isLoading, router])
+
+    if (!isLoading && !user) {
+      let isMounted = true
+      getSetupStatus()
+        .then((status) => {
+          if (isMounted) {
+            setNeedsInitialSetup(!status.initialized)
+          }
+        })
+        .catch(() => {})
+      return () => {
+        isMounted = false
+      }
+    }
+  }, [user, isLoading, router, getSetupStatus])
 
   async function handleFormSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -111,6 +127,32 @@ export default function LoginPage() {
             Plataforma inteligente de encomendas com visão computacional para condomínios
           </p>
         </div>
+
+        {/* Opção visível EXCLUSIVAMENTE quando nenhum condomínio/síndico foi configurado ainda */}
+        {needsInitialSetup && (
+          <div className="rounded-xl border border-zinc-900/15 bg-zinc-900 text-white p-4 shadow-sm flex flex-col gap-3 animate-in fade-in-50 duration-300">
+            <div className="flex items-start gap-3">
+              <div className="size-9 rounded-lg bg-[#E1FF01] text-zinc-950 flex items-center justify-center shrink-0">
+                <Building2 className="size-5" />
+              </div>
+              <div className="space-y-0.5">
+                <h2 className="text-sm font-extrabold tracking-tight">
+                  Nenhum condomínio configurado
+                </h2>
+                <p className="text-[11px] text-zinc-300 leading-relaxed">
+                  Inicie do zero criando seu condomínio, endereço oficial e a conta do síndico.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/criar-condominio"
+              className="w-full h-9 rounded-full bg-[#E1FF01] hover:bg-[#d5f500] text-zinc-950 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <span>Criar Meu Condomínio</span>
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </div>
+        )}
 
         {/* 1-Tap Demo Quick Access (Isolated in shared/dev-tools) */}
         <DemoQuickLoginCards
