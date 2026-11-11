@@ -1,16 +1,14 @@
 "use client"
 
-import React, { useState } from "react"
-import { UserOperator, CreateUserFormData, UpdateUserFormData } from "@/entities/user/model/types"
+import React, { useState, useEffect } from "react"
+import { UserOperator, CreateUserFormData } from "@/entities/user/model/types"
 import { userPort } from "@/shared/ports"
 import { UserDialog } from "@/features/manage-users/ui/user-dialog"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { toast } from "sonner"
 import {
-  Users,
   UserCheck,
-  ShieldAlert,
   Search,
   Plus,
   Power,
@@ -18,7 +16,6 @@ import {
   Trash2,
   Package,
   Shield,
-  KeyRound,
 } from "lucide-react"
 
 import {
@@ -38,6 +35,7 @@ interface UsersManagerWidgetProps {
 
 export function UsersManagerWidget({ initialUsers }: UsersManagerWidgetProps) {
   const [users, setUsers] = useState<UserOperator[]>(initialUsers || [])
+  const [isLoading, setIsLoading] = useState((initialUsers || []).length === 0)
   const [search, setSearch] = useState("")
   const [roleFilter, setRoleFilter] = useState<"ALL" | "PORTER" | "ADMIN">("ALL")
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -52,8 +50,34 @@ export function UsersManagerWidget({ initialUsers }: UsersManagerWidgetProps) {
     onConfirm: () => void
   } | null>(null)
 
+  // Busca autenticada no cliente (o SSR não tem acesso ao JWT em localStorage)
+  useEffect(() => {
+    let isCancelled = false
+
+    userPort
+      .listUsers({ limit: 100 })
+      .then((data) => {
+        if (!isCancelled && Array.isArray(data?.items)) {
+          setUsers(data.items)
+        }
+      })
+      .catch((err) => {
+        console.warn("[UsersManagerWidget] Erro ao carregar operadores:", err)
+      })
+      .finally(() => {
+        if (!isCancelled) setIsLoading(false)
+      })
+
+    return () => {
+      isCancelled = true
+    }
+  }, [])
+
+  // Mantém exclusivamente operadores na listagem (moradores são geridos em /admin/moradores)
+  const operatorUsers = users.filter((u) => u.role === "ADMIN" || u.role === "PORTER")
+
   // Filtros em memória
-  const filteredUsers = users.filter((u) => {
+  const filteredUsers = operatorUsers.filter((u) => {
     const matchesRole = roleFilter === "ALL" || u.role === roleFilter
     const term = search.toLowerCase().trim()
     const matchesSearch =
@@ -63,9 +87,9 @@ export function UsersManagerWidget({ initialUsers }: UsersManagerWidgetProps) {
     return matchesRole && matchesSearch
   })
 
-  const activePorters = users.filter((u) => u.role === "PORTER" && u.isActive).length
-  const totalPorters = users.filter((u) => u.role === "PORTER").length
-  const totalAdmins = users.filter((u) => u.role === "ADMIN").length
+  const activePorters = operatorUsers.filter((u) => u.role === "PORTER" && u.isActive).length
+  const totalPorters = operatorUsers.filter((u) => u.role === "PORTER").length
+  const totalAdmins = operatorUsers.filter((u) => u.role === "ADMIN").length
 
   async function handleSaveUser(data: CreateUserFormData): Promise<UserOperator> {
     if (editingUser) {
@@ -279,7 +303,13 @@ export function UsersManagerWidget({ initialUsers }: UsersManagerWidgetProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 text-xs">
-              {filteredUsers.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-zinc-400">
+                    Carregando operadores...
+                  </td>
+                </tr>
+              ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-zinc-400">
                     Nenhum operador encontrado com os filtros aplicados.
@@ -298,10 +328,14 @@ export function UsersManagerWidget({ initialUsers }: UsersManagerWidgetProps) {
                           <Shield className="size-3" />
                           Síndico / Admin
                         </span>
-                      ) : (
+                      ) : user.role === "PORTER" ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-800 border border-zinc-200">
                           <UserCheck className="size-3 text-zinc-500" />
                           Porteiro
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Morador
                         </span>
                       )}
                     </td>

@@ -27,6 +27,8 @@ export class UsersService {
     const where: any = {}
     if (params?.role) {
       where.role = params.role
+    } else {
+      where.role = { in: [UserRole.ADMIN, UserRole.PORTER] }
     }
     if (params?.isActive !== undefined) {
       where.isActive = params.isActive
