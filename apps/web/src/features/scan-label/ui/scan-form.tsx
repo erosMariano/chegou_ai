@@ -161,7 +161,7 @@ export function ScanForm({ units }: ScanFormProps) {
 
   function handleSimulateScan() {
     setPreviewUrl(null)
-    processExtraction()
+    processExtraction("mock-simulated-label", "image/jpeg")
   }
 
   async function onSubmit(data: CheckinFormData) {

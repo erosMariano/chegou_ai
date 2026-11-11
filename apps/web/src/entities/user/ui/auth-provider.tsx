@@ -6,6 +6,7 @@ import {
   UserRole,
   LoginCredentials,
   SetupInitialAdminInput,
+  ActivateAccountInput,
   SetupStatus,
 } from "@/shared/ports/IAuthGateway"
 import { authGateway } from "@/shared/ports"
@@ -18,6 +19,7 @@ interface AuthContextType {
   loginAsDemo: (role: UserRole) => Promise<UserSession>
   getSetupStatus: () => Promise<SetupStatus>
   setupInitialAdmin: (input: SetupInitialAdminInput) => Promise<UserSession>
+  activateAccount: (input: ActivateAccountInput) => Promise<UserSession>
   logout: () => Promise<void>
   resetDemoData: () => Promise<void>
 }
@@ -77,6 +79,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return session
   }
 
+  async function activateAccount(input: ActivateAccountInput): Promise<UserSession> {
+    const session = await authGateway.activateAccount(input)
+    setUser(session)
+    return session
+  }
+
   async function logout(): Promise<void> {
     try {
       await authGateway.logout()
@@ -112,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginAsDemo,
         getSetupStatus,
         setupInitialAdmin,
+        activateAccount,
         logout,
         resetDemoData,
       }}
