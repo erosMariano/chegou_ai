@@ -1,11 +1,13 @@
 import { packagePort } from "@/shared/ports"
 import { AdminHeader } from "@/widgets/admin-header/ui/admin-header"
 import { AuditLogTableWidget } from "@/widgets/audit-log-table/ui/audit-log-table-widget"
-import { ShieldCheck, Activity, Clock, Zap, Lock, ArrowUpRight } from "lucide-react"
+import { ShieldCheck, Activity, Clock, Zap } from "lucide-react"
 
 export default async function AdminPage() {
-  const events = await packagePort.listEvents()
-  const packages = await packagePort.listPackages()
+  const [events, packages] = await Promise.all([
+    packagePort.listEvents(),
+    packagePort.listPackages(),
+  ])
 
   const deliveredCount = packages.filter((p) => p.status === "DELIVERED").length
 
