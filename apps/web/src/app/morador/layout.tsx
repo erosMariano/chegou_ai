@@ -1,5 +1,3 @@
-"use client"
-
 import { AuthGuard } from "@/features/auth/ui/auth-guard"
 
 export default function MoradorLayout({

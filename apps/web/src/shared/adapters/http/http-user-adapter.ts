@@ -18,13 +18,16 @@ export class HttpUserAdapter implements UserPort {
     if (params?.limit) query.append("limit", String(params.limit))
 
     const queryString = query.toString() ? `?${query.toString()}` : ""
-    const res = await httpGet<any>(`/users${queryString}`, { items: [], total: 0 })
+    const res = await httpGet<UserOperator[] | { items?: UserOperator[]; total?: number }>(
+      `/users${queryString}`,
+      { items: [], total: 0 }
+    )
     if (Array.isArray(res)) {
       return { items: res, total: res.length }
     }
     return {
-      items: res?.items || [],
-      total: res?.total || 0,
+      items: res?.items ?? [],
+      total: res?.total ?? 0,
     }
   }
 

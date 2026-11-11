@@ -1,7 +1,13 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState } from "react"
-import { UserSession, UserRole, LoginCredentials } from "@/shared/ports/IAuthGateway"
+import {
+  UserSession,
+  UserRole,
+  LoginCredentials,
+  SetupInitialAdminInput,
+  SetupStatus,
+} from "@/shared/ports/IAuthGateway"
 import { authGateway } from "@/shared/ports"
 import { useRouter } from "next/navigation"
 
@@ -10,6 +16,8 @@ interface AuthContextType {
   isLoading: boolean
   login: (credentials: LoginCredentials) => Promise<UserSession>
   loginAsDemo: (role: UserRole) => Promise<UserSession>
+  getSetupStatus: () => Promise<SetupStatus>
+  setupInitialAdmin: (input: SetupInitialAdminInput) => Promise<UserSession>
   logout: () => Promise<void>
   resetDemoData: () => Promise<void>
 }
@@ -22,14 +30,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Initial load from localStorage
-    try {
-      setUser(authGateway.getCurrentSession())
-    } catch (err) {
-      console.error("[AuthProvider] Falha ao recuperar sessão local:", err)
-    } finally {
-      setIsLoading(false)
-    }
+    let isCancelled = false
+
+    // Defer initial localStorage hydration to keep effect state updates asynchronous
+    queueMicrotask(() => {
+      if (isCancelled) return
+      try {
+        setUser(authGateway.getCurrentSession())
+      } catch (err) {
+        console.error("[AuthProvider] Falha ao recuperar sessão local:", err)
+      } finally {
+        setIsLoading(false)
+      }
+    })
 
     // Listen for session changes across tabs/windows
     const unsubscribe = authGateway.subscribe((updatedSession) => {
@@ -37,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => {
+      isCancelled = true
       unsubscribe()
     }
   }, [])
@@ -49,6 +63,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function loginAsDemo(role: UserRole): Promise<UserSession> {
     const session = await authGateway.loginAsDemo(role)
+    setUser(session)
+    return session
+  }
+
+  async function getSetupStatus(): Promise<SetupStatus> {
+    return authGateway.getSetupStatus()
+  }
+
+  async function setupInitialAdmin(input: SetupInitialAdminInput): Promise<UserSession> {
+    const session = await authGateway.setupInitialAdmin(input)
     setUser(session)
     return session
   }
@@ -86,6 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         loginAsDemo,
+        getSetupStatus,
+        setupInitialAdmin,
         logout,
         resetDemoData,
       }}

@@ -1,4 +1,14 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, MaxLength, IsOptional } from "class-validator"
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  MaxLength,
+  IsOptional,
+  ValidateNested,
+  Length,
+} from "class-validator"
+import { Type } from "class-transformer"
 import { ApiProperty } from "@nestjs/swagger"
 
 export class ActivateAccountDto {
@@ -42,6 +52,48 @@ export class ResetPasswordDto {
   newPassword: string
 }
 
+export class InitialCondominiumAddressDto {
+  @ApiProperty({ example: "Portaria Principal", required: false, description: "Rótulo identificador do endereço" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  label?: string
+
+  @ApiProperty({ example: "01410-000", description: "CEP oficial do condomínio" })
+  @IsString({ message: "O CEP deve ser um texto." })
+  @IsNotEmpty({ message: "O CEP do condomínio é obrigatório." })
+  zipCode: string
+
+  @ApiProperty({ example: "Avenida Paulista", description: "Logradouro oficial do condomínio" })
+  @IsString({ message: "O logradouro deve ser um texto." })
+  @IsNotEmpty({ message: "O logradouro do condomínio é obrigatório." })
+  @MaxLength(200)
+  street: string
+
+  @ApiProperty({ example: "1500", description: "Número predial do condomínio" })
+  @IsString({ message: "O número predial deve ser um texto." })
+  @IsNotEmpty({ message: "O número predial é obrigatório." })
+  @MaxLength(20)
+  number: string
+
+  @ApiProperty({ example: "Bela Vista", description: "Bairro do condomínio" })
+  @IsString({ message: "O bairro deve ser um texto." })
+  @IsNotEmpty({ message: "O bairro é obrigatório." })
+  @MaxLength(100)
+  neighborhood: string
+
+  @ApiProperty({ example: "São Paulo", description: "Cidade do condomínio" })
+  @IsString({ message: "A cidade deve ser um texto." })
+  @IsNotEmpty({ message: "A cidade é obrigatória." })
+  @MaxLength(100)
+  city: string
+
+  @ApiProperty({ example: "SP", description: "UF do condomínio (2 letras)" })
+  @IsString({ message: "A UF deve ser um texto." })
+  @Length(2, 2, { message: "A UF deve conter exatamente 2 letras (ex: SP, RJ)." })
+  state: string
+}
+
 export class SetupInitialAdminDto {
   @ApiProperty({ example: "Condomínio Residencial Jardins do Sol", description: "Nome institucional do condomínio" })
   @IsString({ message: "Nome do condomínio deve ser um texto." })
@@ -72,4 +124,10 @@ export class SetupInitialAdminDto {
   @MinLength(6, { message: "A senha deve ter no mínimo 6 caracteres." })
   @MaxLength(100, { message: "A senha deve ter no máximo 100 caracteres." })
   password: string
+
+  @ApiProperty({ type: InitialCondominiumAddressDto, required: false, description: "Endereço oficial principal do condomínio" })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => InitialCondominiumAddressDto)
+  address?: InitialCondominiumAddressDto
 }

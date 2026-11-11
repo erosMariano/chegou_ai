@@ -14,7 +14,7 @@ import {
 @ApiTags("Auth")
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post("login")
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // Anti-Brute-Force: máximo 5 tentativas por minuto
@@ -52,6 +52,14 @@ export class AuthController {
   @ApiResponse({ status: 401, description: "Não autenticado." })
   async getMe(@Request() req: any) {
     return this.authService.getMe(req.user.id)
+  }
+
+  @Get("setup-status")
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  @ApiOperation({ summary: "Verifica se o sistema já possui condomínio/administrador inicial", description: "Retorna { initialized: boolean } para controlar o onboarding inicial sem expor dados sensíveis." })
+  @ApiResponse({ status: 200, description: "Status de inicialização retornado com sucesso." })
+  async getSetupStatus() {
+    return this.authService.getSetupStatus()
   }
 
   @Post("setup-initial-admin")

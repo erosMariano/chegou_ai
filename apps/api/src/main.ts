@@ -27,32 +27,48 @@ async function bootstrap() {
   app.use(express.json({ limit: "10mb" }))
   app.use(express.urlencoded({ limit: "10mb", extended: true }))
 
-  const allowedOrigins: (string | RegExp)[] = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    /^http:\/\/192\.168\.\d+\.\d+:3000$/,
-    /^http:\/\/10\.\d+\.\d+\.\d+:3000$/,
-    "https://chegou-ai.vercel.app",
-    "https://chegou-ai-ten.vercel.app",
-    "https://chegou.ai",
-    "https://www.chegou.ai",
-    /^https:\/\/chegou-ai(-[a-zA-Z0-9]+)?-erosmarianos-projects\.vercel\.app$/,
-  ]
+  const isProduction = process.env.NODE_ENV === "production"
 
-  if (process.env.FRONTEND_URL) {
-    const cleanUrl = process.env.FRONTEND_URL.trim().replace(/\/+$/, "")
-    allowedOrigins.push(cleanUrl)
-    allowedOrigins.push(`${cleanUrl}/`)
+  // Separação estrita de origens permitidas (CORS) por ambiente
+  const allowedOrigins: (string | RegExp)[] = isProduction
+    ? ["https://chegou-ai-ten.vercel.app"]
+    : [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        /^http:\/\/192\.168\.\d+\.\d+:3000$/,
+        /^http:\/\/10\.\d+\.\d+\.\d+:3000$/,
+      ]
+
+  const appendEnvOrigin = (rawUrl?: string) => {
+    if (!rawUrl) return
+    const cleanUrl = rawUrl.trim().replace(/\/+$/, "")
+    if (!cleanUrl) return
+
+    // Em produção, bloqueia origens locais (localhost/loopback/rede privada) caso estejam em variáveis de ambiente
+    if (
+      isProduction &&
+      /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/i.test(
+        cleanUrl
+      )
+    ) {
+      return
+    }
+
+    if (!allowedOrigins.includes(cleanUrl)) {
+      allowedOrigins.push(cleanUrl)
+    }
   }
+
+  appendEnvOrigin(process.env.FRONTEND_URL)
   if (process.env.ALLOWED_ORIGINS) {
-    process.env.ALLOWED_ORIGINS.split(",").forEach((o) => {
-      const trimmed = o.trim().replace(/\/+$/, "")
-      if (trimmed) {
-        allowedOrigins.push(trimmed)
-        allowedOrigins.push(`${trimmed}/`)
-      }
-    })
+    process.env.ALLOWED_ORIGINS.split(",").forEach(appendEnvOrigin)
   }
+
+  logger.log(
+    `🔒 CORS [${isProduction ? "PRODUCTION" : "DEVELOPMENT"}] origens permitidas: ${allowedOrigins
+      .map((o) => o.toString())
+      .join(", ")}`
+  )
 
   // CORS habilitado para o Front-end Next.js
   app.enableCors({

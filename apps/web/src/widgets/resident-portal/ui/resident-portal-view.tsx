@@ -82,15 +82,20 @@ export function ResidentPortalView({ initialPackages }: ResidentPortalViewProps)
 
   // Polling automático a cada 3 segundos enquanto a tela estiver em foco
   useEffect(() => {
-    fetchPackages()
+    const initialTimer = setTimeout(() => {
+      void fetchPackages()
+    }, 0)
 
     const interval = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "visible") {
-        fetchPackages()
+        void fetchPackages()
       }
     }, 3000)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearTimeout(initialTimer)
+      clearInterval(interval)
+    }
   }, [fetchPackages])
 
   // Pacote pendente que requer apresentação do passe na portaria

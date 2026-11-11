@@ -171,7 +171,7 @@ export async function httpPatch<T>(endpoint: string, body?: unknown): Promise<T>
   }
 }
 
-export async function httpDelete<T = any>(endpoint: string): Promise<T> {
+export async function httpDelete<T = unknown>(endpoint: string): Promise<T> {
   const baseUrl = getApiBaseUrl()
   const url = `${baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`
 

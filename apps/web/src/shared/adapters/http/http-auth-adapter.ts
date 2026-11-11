@@ -1,10 +1,12 @@
 import {
   IAuthGateway,
   LoginCredentials,
+  SetupInitialAdminInput,
+  SetupStatus,
   UserRole,
   UserSession,
 } from "@/shared/ports/IAuthGateway"
-import { httpPost } from "./http-client"
+import { httpGet, httpPost } from "./http-client"
 
 const STORAGE_KEY = "chegou_session"
 
@@ -61,6 +63,28 @@ export class HttpAuthAdapter implements IAuthGateway {
     } catch {
       throw new Error(`Login de demonstração indisponível para o papel ${role} no backend.`)
     }
+  }
+
+  async getSetupStatus(): Promise<SetupStatus> {
+    return httpGet<SetupStatus>("/auth/setup-status", { initialized: true })
+  }
+
+  async setupInitialAdmin(input: SetupInitialAdminInput): Promise<UserSession> {
+    const res = await httpPost<{ user: UserSession; token: string }>(
+      "/auth/setup-initial-admin",
+      input
+    )
+    const session: UserSession = {
+      ...res.user,
+      token: res.token,
+    }
+
+    this.currentSession = session
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+    }
+    this.notify()
+    return session
   }
 
   async logout(): Promise<void> {

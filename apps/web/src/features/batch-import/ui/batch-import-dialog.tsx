@@ -13,13 +13,29 @@ import { Button } from "@/shared/ui/button"
 import { toast } from "sonner"
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Download, RefreshCw } from "lucide-react"
 
+interface ImportUnitRow {
+  block?: string
+  number: string
+}
+
+interface ImportResidentRow {
+  block?: string
+  number: string
+  fullName: string
+  email: string
+  phone?: string
+  isPrimary?: boolean
+}
+
+type BatchImportRow = ImportUnitRow | ImportResidentRow
+
 interface BatchImportDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   type: "UNITS" | "RESIDENTS"
   onSuccess: () => void
-  onImportUnits?: (items: Array<{ block?: string; number: string }>) => Promise<{ totalReceived: number; created: number; skipped: number }>
-  onImportResidents?: (items: Array<{ block?: string; number: string; fullName: string; email: string; phone?: string; isPrimary?: boolean }>) => Promise<{ totalReceived: number; created: number; errors: string[] }>
+  onImportUnits?: (items: ImportUnitRow[]) => Promise<{ totalReceived: number; created: number; skipped: number }>
+  onImportResidents?: (items: ImportResidentRow[]) => Promise<{ totalReceived: number; created: number; errors: string[] }>
 }
 
 export function BatchImportDialog({
@@ -31,7 +47,7 @@ export function BatchImportDialog({
   onImportResidents,
 }: BatchImportDialogProps) {
   const [file, setFile] = useState<File | null>(null)
-  const [parsedRows, setParsedRows] = useState<any[]>([])
+  const [parsedRows, setParsedRows] = useState<BatchImportRow[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [importResult, setImportResult] = useState<{
     totalReceived: number
@@ -73,7 +89,7 @@ export function BatchImportDialog({
       return
     }
 
-    const rows: any[] = []
+    const rows: BatchImportRow[] = []
     const startIndex = 1 // Pula cabeçalho
 
     for (let i = startIndex; i < lines.length; i++) {
@@ -127,11 +143,13 @@ export function BatchImportDialog({
     try {
       setIsProcessing(true)
       if (type === "UNITS" && onImportUnits) {
-        const res = await onImportUnits(parsedRows)
+        const unitRows: ImportUnitRow[] = parsedRows.map(({ block, number }) => ({ block, number }))
+        const res = await onImportUnits(unitRows)
         setImportResult(res)
         toast.success(`Importação concluída: ${res.created} unidades criadas!`)
       } else if (type === "RESIDENTS" && onImportResidents) {
-        const res = await onImportResidents(parsedRows)
+        const residentRows = parsedRows.filter((row): row is ImportResidentRow => "fullName" in row)
+        const res = await onImportResidents(residentRows)
         setImportResult(res)
         toast.success(`Importação concluída: ${res.created} moradores cadastrados!`)
       }
@@ -249,7 +267,7 @@ export function BatchImportDialog({
                         <tr key={idx} className="hover:bg-zinc-50/50">
                           <td className="py-2 px-3 font-semibold text-zinc-800">{r.block}</td>
                           <td className="py-2 px-3 text-zinc-700">{r.number}</td>
-                          {type === "RESIDENTS" && (
+                          {type === "RESIDENTS" && "fullName" in r && (
                             <>
                               <td className="py-2 px-3 font-sans text-zinc-900 font-medium">{r.fullName}</td>
                               <td className="py-2 px-3 text-zinc-500">{r.email}</td>
