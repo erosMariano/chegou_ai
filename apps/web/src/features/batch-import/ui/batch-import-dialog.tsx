@@ -27,7 +27,22 @@ interface ImportResidentRow {
   isPrimary?: boolean
 }
 
-type BatchImportRow = ImportUnitRow | ImportResidentRow
+interface ParsedCsvRow {
+  block: string
+  number: string
+  fullName?: string
+  email?: string
+  phone?: string
+  isPrimary?: boolean
+}
+
+interface ImportResultSummary {
+  totalReceived: number
+  created: number
+  skipped?: number
+  residentsCreated?: number
+  errors?: string[]
+}
 
 interface BatchImportDialogProps {
   open: boolean
@@ -36,6 +51,76 @@ interface BatchImportDialogProps {
   onSuccess: () => void
   onImportUnits?: (items: ImportUnitRow[]) => Promise<{ totalReceived: number; created: number; skipped: number }>
   onImportResidents?: (items: ImportResidentRow[]) => Promise<{ totalReceived: number; created: number; errors: string[] }>
+}
+
+function detectCsvDelimiter(headerLine: string): "," | ";" {
+  const semicolonCount = (headerLine.match(/;/g) || []).length
+  const commaCount = (headerLine.match(/,/g) || []).length
+  return semicolonCount > commaCount ? ";" : ","
+}
+
+function parseCsvLine(line: string, delimiter: "," | ";"): string[] {
+  return line.split(delimiter).map((part) => part.replace(/^"|"$/g, "").trim())
+}
+
+function parsePrimaryFlag(value?: string): boolean {
+  const normalized = (value || "").trim().toLowerCase()
+  return normalized === "sim" || normalized === "s" || normalized === "true" || normalized === "1"
+}
+
+function parseBatchCsv(text: string, type: "UNITS" | "RESIDENTS"): ParsedCsvRow[] {
+  const cleanedText = text.replace(/^\uFEFF/, "")
+  const lines = cleanedText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+
+  if (lines.length < 2) {
+    return []
+  }
+
+  const delimiter = detectCsvDelimiter(lines[0])
+  const rows: ParsedCsvRow[] = []
+
+  for (let i = 1; i < lines.length; i++) {
+    const parts = parseCsvLine(lines[i], delimiter)
+    const block = parts[0] || "UNICO"
+    const number = parts[1] || ""
+
+    if (type === "UNITS") {
+      if (parts.length === 1 && parts[0]) {
+        rows.push({ block: "UNICO", number: parts[0] })
+        continue
+      }
+
+      if (!number) continue
+
+      const fullName = parts[2] || ""
+      const email = parts[3] || ""
+      const phone = parts[4] || ""
+      const isPrimary = parsePrimaryFlag(parts[5])
+
+      rows.push({
+        block,
+        number,
+        ...(fullName ? { fullName } : {}),
+        ...(email ? { email } : {}),
+        ...(phone ? { phone } : {}),
+        ...(fullName || email ? { isPrimary } : {}),
+      })
+    } else if (parts.length >= 4 && number) {
+      rows.push({
+        block,
+        number,
+        fullName: parts[2] || "",
+        email: parts[3] || "",
+        phone: parts[4] || "",
+        isPrimary: parsePrimaryFlag(parts[5]),
+      })
+    }
+  }
+
+  return rows
 }
 
 export function BatchImportDialog({
@@ -47,29 +132,35 @@ export function BatchImportDialog({
   onImportResidents,
 }: BatchImportDialogProps) {
   const [file, setFile] = useState<File | null>(null)
-  const [parsedRows, setParsedRows] = useState<BatchImportRow[]>([])
+  const [parsedRows, setParsedRows] = useState<ParsedCsvRow[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
-  const [importResult, setImportResult] = useState<{
-    totalReceived: number
-    created: number
-    skipped?: number
-    errors?: string[]
-  } | null>(null)
+  const [importResult, setImportResult] = useState<ImportResultSummary | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const hasResidentData = parsedRows.some((row) => Boolean(row.fullName || row.email))
+  const showResidentColumns = type === "RESIDENTS" || hasResidentData
 
   function handleDownloadTemplate() {
     let csvContent = ""
     let filename = ""
+
     if (type === "UNITS") {
-      csvContent = "bloco,numero\nA,101\nA,102\nA,103\nB,201\nB,202\nB,203\n"
+      csvContent =
+        "bloco,numero,nome_completo,email,telefone,principal\n" +
+        "A,101,João da Silva,joao@exemplo.com,(11) 91234-5678,sim\n" +
+        "A,102,,,,\n" +
+        "B,402,Mariana Costa Silva,mariana@exemplo.com,(11) 98765-4321,sim\n"
       filename = "modelo-unidades-chegou-ai.csv"
     } else {
-      csvContent = "bloco,numero,nome_completo,email,telefone,principal\nB,402,Mariana Costa Silva,mariana@exemplo.com,(11) 98765-4321,sim\nA,101,João da Silva,joao@exemplo.com,(11) 91234-5678,nao\n"
+      csvContent =
+        "bloco,numero,nome_completo,email,telefone,principal\n" +
+        "B,402,Mariana Costa Silva,mariana@exemplo.com,(11) 98765-4321,sim\n" +
+        "A,101,João da Silva,joao@exemplo.com,(11) 91234-5678,nao\n"
       filename = "modelo-moradores-chegou-ai.csv"
     }
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
@@ -77,44 +168,22 @@ export function BatchImportDialog({
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   function parseCSV(text: string) {
-    const lines = text
+    const cleanedLines = text
+      .replace(/^\uFEFF/, "")
       .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0)
-    if (lines.length < 2) {
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+
+    if (cleanedLines.length < 2) {
       toast.error("O arquivo precisa conter pelo menos o cabeçalho e uma linha de dados.")
       return
     }
 
-    const rows: BatchImportRow[] = []
-    const startIndex = 1 // Pula cabeçalho
-
-    for (let i = startIndex; i < lines.length; i++) {
-      const parts = lines[i].split(",").map((p) => p.replace(/^"|"$/g, "").trim())
-      if (type === "UNITS") {
-        if (parts.length >= 2) {
-          rows.push({ block: parts[0] || "UNICO", number: parts[1] })
-        } else if (parts.length === 1 && parts[0]) {
-          rows.push({ block: "UNICO", number: parts[0] })
-        }
-      } else {
-        if (parts.length >= 4) {
-          rows.push({
-            block: parts[0] || "UNICO",
-            number: parts[1] || "",
-            fullName: parts[2] || "",
-            email: parts[3] || "",
-            phone: parts[4] || "",
-            isPrimary: parts[5]?.toLowerCase() === "sim" || parts[5]?.toLowerCase() === "true",
-          })
-        }
-      }
-    }
-
-    setParsedRows(rows)
+    setParsedRows(parseBatchCsv(text, type))
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -144,11 +213,65 @@ export function BatchImportDialog({
       setIsProcessing(true)
       if (type === "UNITS" && onImportUnits) {
         const unitRows: ImportUnitRow[] = parsedRows.map(({ block, number }) => ({ block, number }))
-        const res = await onImportUnits(unitRows)
-        setImportResult(res)
-        toast.success(`Importação concluída: ${res.created} unidades criadas!`)
+        const unitRes = await onImportUnits(unitRows)
+
+        const residentRows: ImportResidentRow[] = []
+        const validationErrors: string[] = []
+
+        parsedRows.forEach((row, index) => {
+          const fullName = (row.fullName || "").trim()
+          const email = (row.email || "").trim()
+
+          if (fullName && email) {
+            residentRows.push({
+              block: row.block,
+              number: row.number,
+              fullName,
+              email,
+              phone: row.phone,
+              isPrimary: row.isPrimary,
+            })
+          } else if (fullName || email) {
+            validationErrors.push(
+              `Linha ${index + 1} (${row.block}-${row.number}): informe nome completo e e-mail para vincular o morador.`
+            )
+          }
+        })
+
+        let residentsCreated: number | undefined
+        let residentErrors: string[] = []
+
+        if (residentRows.length > 0 && onImportResidents) {
+          const resResult = await onImportResidents(residentRows)
+          residentsCreated = resResult.created
+          residentErrors = resResult.errors
+        }
+
+        const allErrors = [...validationErrors, ...residentErrors]
+        setImportResult({
+          totalReceived: unitRes.totalReceived,
+          created: unitRes.created,
+          skipped: unitRes.skipped,
+          residentsCreated,
+          errors: allErrors,
+        })
+
+        if (residentsCreated !== undefined) {
+          toast.success(
+            `Importação concluída: ${unitRes.created} unidades e ${residentsCreated} moradores cadastrados!`
+          )
+        } else {
+          toast.success(`Importação concluída: ${unitRes.created} unidades criadas!`)
+        }
       } else if (type === "RESIDENTS" && onImportResidents) {
-        const residentRows = parsedRows.filter((row): row is ImportResidentRow => "fullName" in row)
+        const residentRows: ImportResidentRow[] = parsedRows.map((row) => ({
+          block: row.block,
+          number: row.number,
+          fullName: row.fullName || "",
+          email: row.email || "",
+          phone: row.phone,
+          isPrimary: row.isPrimary,
+        }))
         const res = await onImportResidents(residentRows)
         setImportResult(res)
         toast.success(`Importação concluída: ${res.created} moradores cadastrados!`)
@@ -188,10 +311,12 @@ export function BatchImportDialog({
             </Button>
           </div>
           <DialogTitle className="text-lg font-extrabold text-zinc-950 tracking-tight">
-            Importar {type === "UNITS" ? "Unidades" : "Moradores"} em Lote
+            Importar {type === "UNITS" ? "Unidades e Moradores" : "Moradores"} em Lote
           </DialogTitle>
           <DialogDescription className="text-xs text-zinc-500">
-            Carregue uma planilha CSV para cadastrar dezenas ou centenas de {type === "UNITS" ? "apartamentos" : "condôminos"} instantaneamente.
+            {type === "UNITS"
+              ? "Carregue uma planilha CSV com bloco e número da unidade e, opcionalmente, os dados do morador para vincular tudo de uma vez."
+              : "Carregue uma planilha CSV para cadastrar dezenas ou centenas de condôminos instantaneamente."}
           </DialogDescription>
         </DialogHeader>
 
@@ -216,7 +341,7 @@ export function BatchImportDialog({
               Clique para selecionar o arquivo CSV
             </p>
             <p className="text-[11px] text-zinc-400 mt-0.5">
-              Formato esperado: .csv delimitado por vírgulas
+              Formato esperado: .csv delimitado por vírgulas (,) ou ponto-e-vírgula (;)
             </p>
           </div>
         ) : (
@@ -254,7 +379,7 @@ export function BatchImportDialog({
                       <tr className="border-b border-zinc-200">
                         <th className="py-2 px-3">Bloco</th>
                         <th className="py-2 px-3">Número</th>
-                        {type === "RESIDENTS" && (
+                        {showResidentColumns && (
                           <>
                             <th className="py-2 px-3">Nome</th>
                             <th className="py-2 px-3">E-mail</th>
@@ -267,10 +392,12 @@ export function BatchImportDialog({
                         <tr key={idx} className="hover:bg-zinc-50/50">
                           <td className="py-2 px-3 font-semibold text-zinc-800">{r.block}</td>
                           <td className="py-2 px-3 text-zinc-700">{r.number}</td>
-                          {type === "RESIDENTS" && "fullName" in r && (
+                          {showResidentColumns && (
                             <>
-                              <td className="py-2 px-3 font-sans text-zinc-900 font-medium">{r.fullName}</td>
-                              <td className="py-2 px-3 text-zinc-500">{r.email}</td>
+                              <td className="py-2 px-3 font-sans text-zinc-900 font-medium">
+                                {r.fullName || "—"}
+                              </td>
+                              <td className="py-2 px-3 text-zinc-500">{r.email || "—"}</td>
                             </>
                           )}
                         </tr>
@@ -288,16 +415,24 @@ export function BatchImportDialog({
                   <CheckCircle2 className="size-4 text-emerald-600" />
                   Importação processada com sucesso!
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs pt-1 font-semibold text-emerald-800">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-1 font-semibold text-emerald-800">
                   <div>Recebidas: {importResult.totalReceived}</div>
-                  <div>Cadastradas: {importResult.created}</div>
+                  <div>
+                    {type === "UNITS" ? "Unidades" : "Cadastrados"}: {importResult.created}
+                  </div>
                   {importResult.skipped !== undefined && (
                     <div>Já existiam: {importResult.skipped}</div>
                   )}
+                  {importResult.residentsCreated !== undefined && (
+                    <div>Moradores: {importResult.residentsCreated}</div>
+                  )}
                 </div>
                 {importResult.errors && importResult.errors.length > 0 && (
-                  <div className="pt-2 text-[11px] text-amber-800">
-                    <p className="font-bold">Avisos ({importResult.errors.length}):</p>
+                  <div className="pt-2 text-[11px] text-amber-800 space-y-1">
+                    <p className="font-bold flex items-center gap-1">
+                      <AlertCircle className="size-3.5 shrink-0" />
+                      Avisos ({importResult.errors.length}):
+                    </p>
                     <ul className="list-disc pl-4 space-y-0.5">
                       {importResult.errors.slice(0, 3).map((err, i) => (
                         <li key={i}>{err}</li>
@@ -335,4 +470,3 @@ export function BatchImportDialog({
     </Dialog>
   )
 }
-
