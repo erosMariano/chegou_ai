@@ -58,14 +58,24 @@ services:
     environment:
       PORT: 8080
       DATABASE_URL: postgresql://${POSTGRES_USER:-chegou_admin}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-chegou_ai}?schema=public
+      REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
       REDIS_PORT: 6379
       RABBITMQ_URL: amqp://${RABBITMQ_USER:-chegou_mq}:${RABBITMQ_PASS}@rabbitmq:5672
       JWT_SECRET: ${JWT_SECRET}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:contato@chegou.ai}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8080/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     ports:
       - "8080:8080"
 
