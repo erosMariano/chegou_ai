@@ -1,6 +1,7 @@
 import { INestApplication, ValidationPipe } from "@nestjs/common"
 import { Test } from "@nestjs/testing"
 import { JwtService } from "@nestjs/jwt"
+import { ThrottlerGuard } from "@nestjs/throttler"
 import { UserRole, PackageStatus } from "@prisma/client"
 import * as bcrypt from "bcryptjs"
 import { randomInt, randomUUID } from "crypto"
@@ -81,18 +82,25 @@ export interface TestAppContext {
   rabbitmq: NoopRabbitMQService
 }
 
-export async function createIntegrationTestApp(): Promise<TestAppContext> {
+export async function createIntegrationTestApp(options?: {
+  bypassThrottler?: boolean
+}): Promise<TestAppContext> {
   const mail = new InMemoryMailService()
   const rabbitmq = new NoopRabbitMQService()
 
-  const moduleRef = await Test.createTestingModule({
+  const builder = Test.createTestingModule({
     imports: [AppModule],
   })
     .overrideProvider(MailService)
     .useValue(mail)
     .overrideProvider(RabbitMQService)
     .useValue(rabbitmq)
-    .compile()
+
+  if (options?.bypassThrottler) {
+    builder.overrideGuard(ThrottlerGuard).useValue({ canActivate: () => true })
+  }
+
+  const moduleRef = await builder.compile()
 
   const app = moduleRef.createNestApplication()
   app.setGlobalPrefix("api/v1")

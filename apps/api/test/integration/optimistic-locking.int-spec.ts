@@ -18,7 +18,7 @@ describe("Baixa Concorrente com Optimistic Locking (Integração)", () => {
   let unitId: string
 
   beforeAll(async () => {
-    ctx = await createIntegrationTestApp()
+    ctx = await createIntegrationTestApp({ bypassThrottler: true })
   })
 
   afterAll(async () => {

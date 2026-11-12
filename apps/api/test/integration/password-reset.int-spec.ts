@@ -125,15 +125,21 @@ describe("Fluxo de Reset de Senha (Integração)", () => {
       .send({ email: targetEmail, token: "qualquer", newPassword: "123" })
     expect(weakRes.status).toBe(400)
 
-    const statuses: number[] = []
-    for (let i = 0; i < 6; i++) {
-      const r = await request(ctx.app.getHttpServer())
-        .post("/api/v1/auth/forgot-password")
-        .send({ email: targetEmail })
-      statuses.push(r.status)
+    // Instância isolada para garantir contador in-memory do ThrottlerGuard zerado
+    const rateLimitCtx = await createIntegrationTestApp()
+    try {
+      const statuses: number[] = []
+      for (let i = 0; i < 6; i++) {
+        const r = await request(rateLimitCtx.app.getHttpServer())
+          .post("/api/v1/auth/forgot-password")
+          .send({ email: targetEmail })
+        statuses.push(r.status)
+      }
+      expect(statuses.slice(0, 5).every((s) => s === 201)).toBe(true)
+      expect(statuses[5]).toBe(429)
+    } finally {
+      await rateLimitCtx.app.close()
     }
-    expect(statuses.slice(0, 5).every((s) => s === 201)).toBe(true)
-    expect(statuses[5]).toBe(429)
   })
 
   // ACHADO DE SEGURANÇA (auth.service.ts:264):
