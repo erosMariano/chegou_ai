@@ -5,6 +5,12 @@ import * as amqp from "amqplib"
 export const PACKAGE_EXCHANGE = "chegou.packages.exchange"
 export const PACKAGE_RECEIVED_QUEUE = "chegou.package.received.queue"
 export const PACKAGE_DLQ = "chegou.package.received.dlq"
+export const PACKAGE_RETRY_LEVELS = [
+  { queue: "chegou.package.received.retry.1", ttlMs: 5_000 },
+  { queue: "chegou.package.received.retry.2", ttlMs: 15_000 },
+  { queue: "chegou.package.received.retry.3", ttlMs: 45_000 },
+] as const
+export const MAX_PACKAGE_RETRIES = PACKAGE_RETRY_LEVELS.length
 
 @Injectable()
 export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
@@ -39,10 +45,21 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  isConnected(): boolean {
+    return Boolean(this.connection && this.channel)
+  }
+
   private async connect() {
     try {
       const url = this.config.get<string>("RABBITMQ_URL") || "amqp://guest:guest@localhost:5672"
       this.connection = await amqp.connect(url)
+      this.connection.on("close", () => {
+        this.channel = null
+        this.connection = null
+      })
+      this.connection.on("error", (err: any) => {
+        this.logger.warn(`Erro na conexão RabbitMQ: ${err.message}`)
+      })
       this.channel = await this.connection.createChannel()
 
       // Configuração da DLQ
@@ -58,7 +75,19 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
         },
       })
 
-      this.logger.log("✅ Conexão com RabbitMQ e filas (incluindo DLQ) inicializadas.")
+      // Filas de retry com backoff (TTL expira e reencaminha para a fila principal)
+      for (const level of PACKAGE_RETRY_LEVELS) {
+        await this.channel.assertQueue(level.queue, {
+          durable: true,
+          arguments: {
+            "x-dead-letter-exchange": "",
+            "x-dead-letter-routing-key": PACKAGE_RECEIVED_QUEUE,
+            "x-message-ttl": level.ttlMs,
+          },
+        })
+      }
+
+      this.logger.log("✅ Conexão com RabbitMQ, filas de retry e DLQ inicializadas.")
     } catch (err: any) {
       this.logger.error(`❌ Erro ao conectar ao RabbitMQ: ${err.message}`)
     }
@@ -99,22 +128,60 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
       async (msg: any) => {
         if (!msg) return
 
+        let content: any
         try {
-          const content = JSON.parse(msg.content.toString())
+          content = JSON.parse(msg.content.toString())
+        } catch (parseErr: any) {
+          this.logger.error(`Payload inválido no RabbitMQ (enviando direto para DLQ): ${parseErr.message}`)
+          this.channel.nack(msg, false, false)
+          return
+        }
+
+        try {
           const success = await callback(content)
           if (success) {
             this.channel.ack(msg)
-          } else {
-            // Reenvia para DLQ após falha
-            this.channel.nack(msg, false, false)
+            return
           }
+          await this.scheduleRetryOrDlq(msg, "Callback retornou false")
         } catch (e: any) {
-          this.logger.error(`Erro ao processar mensagem do RabbitMQ: ${e.message}`)
-          this.channel.nack(msg, false, false)
+          await this.scheduleRetryOrDlq(msg, e?.message || "Erro desconhecido")
         }
       },
       { noAck: false }
     )
+  }
+
+  private async scheduleRetryOrDlq(msg: any, reason: string) {
+    const rawRetryCount = Number(msg.properties?.headers?.["x-retry-count"] ?? 0)
+    const retryCount = Number.isFinite(rawRetryCount) && rawRetryCount >= 0 ? rawRetryCount : 0
+
+    if (retryCount < MAX_PACKAGE_RETRIES) {
+      const nextLevel = PACKAGE_RETRY_LEVELS[retryCount]
+      const nextAttempt = retryCount + 1
+
+      this.logger.warn(
+        `⏳ Falha no consumo (${reason}). Agendando retry ${nextAttempt}/${MAX_PACKAGE_RETRIES} em ${nextLevel.ttlMs}ms na fila ${nextLevel.queue}.`
+      )
+
+      const republished = this.channel.sendToQueue(nextLevel.queue, msg.content, {
+        persistent: true,
+        headers: {
+          ...(msg.properties?.headers || {}),
+          "x-retry-count": nextAttempt,
+        },
+      })
+
+      if (republished !== false) {
+        this.channel.ack(msg)
+        return
+      }
+    }
+
+    this.logger.error(
+      `❌ Máximo de ${MAX_PACKAGE_RETRIES} tentativas atingido (${reason}). Enviando mensagem para DLQ (${PACKAGE_DLQ}).`
+    )
+    this.channel.nack(msg, false, false)
   }
 }
 
