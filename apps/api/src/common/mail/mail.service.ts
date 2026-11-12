@@ -2,6 +2,15 @@ import { Injectable, Logger } from "@nestjs/common"
 import { ConfigService } from "@nestjs/config"
 import { Resend } from "resend"
 
+function escapeHtml(value: string): string {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name)
@@ -80,10 +89,10 @@ export class MailService {
           <tr>
             <td style="padding: 36px 36px 28px 36px;">
               <h1 style="font-size: 22px; font-weight: 800; color: #18181B; margin: 0 0 16px 0; letter-spacing: -0.5px;">
-                Olá, ${residentName}! 👋
+                Olá, ${escapeHtml(residentName)}! 👋
               </h1>
               <p style="font-size: 14px; line-height: 22px; color: #52525B; margin: 0 0 20px 0;">
-                A administração do seu condomínio acabou de cadastrar você no <strong>Chegou.AI</strong> vinculado à unidade <strong>${unitInfo}</strong>.
+                A administração do seu condomínio acabou de cadastrar você no <strong>Chegou.AI</strong> vinculado à unidade <strong>${escapeHtml(unitInfo)}</strong>.
               </p>
               <p style="font-size: 14px; line-height: 22px; color: #52525B; margin: 0 0 28px 0;">
                 Com o Chegou.AI, você recebe avisos instantâneos sempre que uma encomenda chegar para o seu apartamento na portaria, acompanhado do seu <strong>Passe Digital com QR Code e PIN</strong> para retirada segura.
@@ -227,7 +236,7 @@ export class MailService {
                 Redefinição de Senha
               </h1>
               <p style="font-size: 14px; line-height: 22px; color: #52525B; margin: 0 0 20px 0;">
-                Olá, ${userName}! Recebemos uma solicitação para redefinir a sua senha de acesso ao Chegou.AI.
+                Olá, ${escapeHtml(userName)}! Recebemos uma solicitação para redefinir a sua senha de acesso ao Chegou.AI.
               </p>
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 28px 0;">
                 <tr>
