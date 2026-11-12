@@ -1,0 +1,109 @@
+name: CI — Testes Automatizados
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: ["*"]
+
+jobs:
+  unit-and-build:
+    name: Testes Unitários e Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependências da API
+        run: npm ci --prefix apps/api
+
+      - name: Instalar dependências do Web
+        run: npm ci --prefix apps/web
+
+      - name: Prisma Generate
+        run: npx --prefix apps/api prisma generate
+
+      - name: Testes Unitários (API + Web)
+        run: npm run test:unit
+
+      - name: Lint Web
+        run: npm run lint --prefix apps/web
+
+      - name: Build API e Web
+        run: npm run build --prefix apps/api && npm run build --prefix apps/web
+
+  integration:
+    name: Testes de Integração (API + Postgres + Redis)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: chegou_test
+          POSTGRES_PASSWORD: postgres_test_password
+          POSTGRES_DB: chegou_ai_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U chegou_test -d chegou_ai_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://chegou_test:postgres_test_password@127.0.0.1:5433/chegou_ai_test?schema=public
+      REDIS_URL: redis://127.0.0.1:6380
+      JWT_SECRET: test_jwt_secret_for_automated_suite_minimum_32_chars_2026
+      FRONTEND_URL: http://127.0.0.1:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependências da API
+        run: npm ci --prefix apps/api
+
+      - name: Prisma Generate & Migrate
+        run: |
+          npx --prefix apps/api prisma generate
+          npx --prefix apps/api prisma migrate deploy
+
+      - name: Rodar Testes de Integração
+        run: npm run test:integration --prefix apps/api
+
+  e2e:
+    name: Testes E2E (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependências do Web
+        run: npm ci --prefix apps/web
+
+      - name: Instalar Chromium (Playwright)
+        run: npx --prefix apps/web playwright install chromium --with-deps
+
+      - name: Rodar Testes E2E
+        run: npm run test:e2e --prefix apps/web
+
