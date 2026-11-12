@@ -19,7 +19,7 @@ import {
   SelectItem,
 } from "@/shared/ui/select"
 import { toast } from "sonner"
-import { Sparkles, ArrowRight, ShieldCheck, AlertCircle, Building2, Check, ArrowLeft } from "lucide-react"
+import { Sparkles, ArrowRight, ShieldCheck, AlertCircle, Building2, Check, ArrowLeft, Search, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { generateUUID } from "@/shared/lib/utils"
 
@@ -35,6 +35,7 @@ export function ScanForm({ units }: ScanFormProps) {
   const [aiScore, setAiScore] = useState<number | null>(null)
   const [addressValidation, setAddressValidation] = useState<AddressValidation | null>(null)
   const [activeStep, setActiveStep] = useState<1 | 2>(1)
+  const [unitSearch, setUnitSearch] = useState("")
 
   useEffect(() => {
     let isMounted = true
@@ -74,6 +75,13 @@ export function ScanForm({ units }: ScanFormProps) {
   const currentUnitId = watch("unitId")
   const recipientName = watch("recipientNameRaw")
   const selectedUnit = unitsList.find((u) => u.id === currentUnitId)
+
+  const filteredUnits = unitsList.filter((u) => {
+    if (!unitSearch.trim()) return true
+    const term = unitSearch.toLowerCase().trim()
+    const fullDesc = `bloco ${u.block} apto ${u.number} ${u.block} ${u.number}`.toLowerCase()
+    return fullDesc.includes(term)
+  })
 
   async function processExtraction(base64Image?: string, mimeType?: string) {
     try {
@@ -355,8 +363,29 @@ export function ScanForm({ units }: ScanFormProps) {
                 Unidade de Destino *
               </Label>
               <span className="text-[11px] text-zinc-400 font-medium">
-                Selecione na lista ou use os atalhos
+                Digite para filtrar bloco ou número
               </span>
+            </div>
+
+            {/* Input de filtro / busca interativa de unidade */}
+            <div className="relative">
+              <Search className="absolute left-3 top-3 size-4 text-zinc-400" />
+              <Input
+                type="text"
+                placeholder="Filtrar por bloco ou apartamento (ex: Bloco A, 101, B)..."
+                value={unitSearch}
+                onChange={(e) => setUnitSearch(e.target.value)}
+                className="pl-9 pr-8 h-10 rounded-lg border-zinc-200 bg-zinc-50/50 text-xs font-medium focus-visible:bg-white"
+              />
+              {unitSearch && (
+                <button
+                  type="button"
+                  onClick={() => setUnitSearch("")}
+                  className="absolute right-2.5 top-2.5 size-5 flex items-center justify-center text-zinc-400 hover:text-zinc-700 rounded-full hover:bg-zinc-200 transition-colors"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
             </div>
 
             <Select
@@ -368,18 +397,24 @@ export function ScanForm({ units }: ScanFormProps) {
                   {selectedUnit ? `Bloco ${selectedUnit.block} - Apto ${selectedUnit.number}` : undefined}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="rounded-lg">
-                {unitsList.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    Bloco {u.block} - Apto {u.number}
-                  </SelectItem>
-                ))}
+              <SelectContent className="rounded-lg max-h-60">
+                {filteredUnits.length > 0 ? (
+                  filteredUnits.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      Bloco {u.block} - Apto {u.number}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <div className="p-3 text-center text-xs text-zinc-400">
+                    Nenhuma unidade encontrada para &quot;{unitSearch}&quot;
+                  </div>
+                )}
               </SelectContent>
             </Select>
 
-            {/* Quick chips for most frequent units */}
+            {/* Quick chips filtrados com base na busca */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1">
-              {unitsList.slice(0, 6).map((u) => {
+              {filteredUnits.slice(0, 6).map((u) => {
                 const isSelected = currentUnitId === u.id
                 return (
                   <Button
