@@ -68,12 +68,20 @@ export class PackagesController {
     @Query("page") page?: number,
     @Query("limit") limit?: number
   ) {
-    let effectiveUnitId = unitId
-    if (req.user?.role === UserRole.RESIDENT) {
-      effectiveUnitId = req.user.unitId
+    const isResident = req.user?.role === UserRole.RESIDENT
+    if (isResident && !req.user?.unitId) {
+      if (!page) {
+        return []
+      }
+      const safePage = Math.max(Number(page) || 1, 1)
+      const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100)
+      return { items: [], total: 0, page: safePage, limit: safeLimit, totalPages: 0 }
     }
 
-    const isResident = req.user?.role === UserRole.RESIDENT
+    let effectiveUnitId = unitId
+    if (isResident) {
+      effectiveUnitId = req.user.unitId
+    }
     const res = await this.packagesService.findAll({
       status,
       unitId: effectiveUnitId,
