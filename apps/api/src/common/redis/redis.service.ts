@@ -68,5 +68,11 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async del(key: string): Promise<void> {
     await this.client.del(key)
   }
+
+  async ping(): Promise<boolean> {
+    if (!this.client) return false
+    const res = await this.client.ping()
+    return res === "PONG"
+  }
 }
 
