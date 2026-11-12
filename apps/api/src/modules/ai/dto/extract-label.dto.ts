@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from "class-validator"
+import { IsString, IsOptional, IsIn } from "class-validator"
 
 export class ExtractLabelDto {
   @IsString()
@@ -7,6 +7,9 @@ export class ExtractLabelDto {
 
   @IsString()
   @IsOptional()
+  @IsIn(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"], {
+    message: "mimeType deve ser uma imagem suportada (jpeg, png, webp, heic, heif).",
+  })
   mimeType?: string
 }
 
