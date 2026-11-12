@@ -3,7 +3,12 @@
   "private": true,
   "scripts": {
     "db:clean": "npm --prefix apps/api run db:clean",
-    "db:seed": "npm --prefix apps/api run prisma:seed"
+    "db:seed": "npm --prefix apps/api run prisma:seed",
+    "test": "npm --prefix apps/api run test && npm --prefix apps/web run test",
+    "test:unit": "npm --prefix apps/api run test:unit && npm --prefix apps/web run test",
+    "test:integration": "npm --prefix apps/api run test:integration",
+    "test:e2e": "npm --prefix apps/web run test:e2e",
+    "test:cov": "npm --prefix apps/api run test:cov && npm --prefix apps/web run test:cov"
   },
   "dependencies": {
     "playwright": "^1.65.0"
