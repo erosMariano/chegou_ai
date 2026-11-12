@@ -24,7 +24,8 @@ jobs:
         run: npm ci --prefix apps/web
 
       - name: Prisma Generate
-        run: npx --prefix apps/api prisma generate
+        working-directory: apps/api
+        run: npx prisma generate
 
       - name: Testes Unitários (API + Web)
         run: npm run test:unit
@@ -81,9 +82,10 @@ jobs:
         run: npm ci --prefix apps/api
 
       - name: Prisma Generate & Migrate
+        working-directory: apps/api
         run: |
-          npx --prefix apps/api prisma generate
-          npx --prefix apps/api prisma migrate deploy
+          npx prisma generate
+          npx prisma migrate deploy
 
       - name: Rodar Testes de Integração
         run: npm run test:integration --prefix apps/api
@@ -102,7 +104,8 @@ jobs:
         run: npm ci --prefix apps/web
 
       - name: Instalar Chromium (Playwright)
-        run: npx --prefix apps/web playwright install chromium --with-deps
+        working-directory: apps/web
+        run: npx playwright install chromium --with-deps
 
       - name: Rodar Testes E2E
         run: npm run test:e2e --prefix apps/web

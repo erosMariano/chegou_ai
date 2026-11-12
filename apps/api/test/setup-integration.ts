@@ -21,7 +21,7 @@ if (existsSync(envTestPath)) {
 // Executa migrações no banco de teste isolado uma vez antes da suíte
 if (process.env.SKIP_TEST_MIGRATE !== "true") {
   execSync("npx prisma migrate deploy", {
-    cwd: resolve(__dirname, "../.."),
+    cwd: resolve(__dirname, ".."),
     stdio: "inherit",
     env: process.env,
   })
