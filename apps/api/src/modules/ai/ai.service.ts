@@ -89,8 +89,8 @@ export class AiService {
       } catch (err: any) {
         this.logger.warn(`Falha ao processar etiqueta via Gemini (${err.message}). Ativando fallback de esteira para desenvolvimento/teste.`)
 
-        // Fallback inteligente de mock para testes e esteiras automatizadas
-        if (imageBase64.includes("mock") || process.env.NODE_ENV !== "production") {
+        // Fallback inteligente de mock apenas fora de produção
+        if (process.env.NODE_ENV !== "production") {
           extracted = await this.buildDevSimulatedExtraction()
         } else {
           throw new UnprocessableEntityException(

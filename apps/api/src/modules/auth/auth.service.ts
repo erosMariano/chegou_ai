@@ -283,8 +283,6 @@ export class AuthService {
 
     return {
       message: "Se o e-mail estiver cadastrado, as instruções para redefinição foram geradas.",
-      resetToken: token,
-      resetUrl,
     }
   }
 
