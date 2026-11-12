@@ -110,3 +110,30 @@ jobs:
       - name: Rodar Testes E2E
         run: npm run test:e2e --prefix apps/web
 
+  security-audit:
+    name: Auditoria de Segurança (npm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Instalar dependências da API
+        run: npm ci --prefix apps/api
+
+      - name: Instalar dependências do Web
+        run: npm ci --prefix apps/web
+
+      - name: Auditoria de vulnerabilidades críticas (API e Web)
+        run: |
+          npm audit --prefix apps/api --omit=dev --audit-level=critical
+          npm audit --prefix apps/web --omit=dev --audit-level=critical
+
+      - name: Relatório informativo de vulnerabilidades altas (API e Web)
+        continue-on-error: true
+        run: |
+          npm audit --prefix apps/api --omit=dev --audit-level=high
+          npm audit --prefix apps/web --omit=dev --audit-level=high
+
