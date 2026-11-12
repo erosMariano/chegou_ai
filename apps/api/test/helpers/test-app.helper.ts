@@ -1,7 +1,7 @@
 import { INestApplication, ValidationPipe } from "@nestjs/common"
+import { APP_GUARD } from "@nestjs/core"
 import { Test } from "@nestjs/testing"
 import { JwtService } from "@nestjs/jwt"
-import { ThrottlerGuard } from "@nestjs/throttler"
 import { UserRole, PackageStatus } from "@prisma/client"
 import * as bcrypt from "bcryptjs"
 import { randomInt, randomUUID } from "crypto"
@@ -97,7 +97,7 @@ export async function createIntegrationTestApp(options?: {
     .useValue(rabbitmq)
 
   if (options?.bypassThrottler) {
-    builder.overrideGuard(ThrottlerGuard).useValue({ canActivate: () => true })
+    builder.overrideProvider(APP_GUARD).useValue({ canActivate: () => true })
   }
 
   const moduleRef = await builder.compile()

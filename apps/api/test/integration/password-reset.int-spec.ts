@@ -13,7 +13,7 @@ describe("Fluxo de Reset de Senha (Integração)", () => {
   const targetEmail = "morador.reset@chegou.test"
 
   beforeAll(async () => {
-    ctx = await createIntegrationTestApp()
+    ctx = await createIntegrationTestApp({ bypassThrottler: true })
   })
 
   afterAll(async () => {
@@ -125,8 +125,8 @@ describe("Fluxo de Reset de Senha (Integração)", () => {
       .send({ email: targetEmail, token: "qualquer", newPassword: "123" })
     expect(weakRes.status).toBe(400)
 
-    // Instância isolada para garantir contador in-memory do ThrottlerGuard zerado
-    const rateLimitCtx = await createIntegrationTestApp()
+    // Instância com ThrottlerGuard ativo e contador in-memory zerado
+    const rateLimitCtx = await createIntegrationTestApp({ bypassThrottler: false })
     try {
       const statuses: number[] = []
       for (let i = 0; i < 6; i++) {

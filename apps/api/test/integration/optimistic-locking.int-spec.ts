@@ -43,9 +43,9 @@ describe("Baixa Concorrente com Optimistic Locking (Integração)", () => {
         registeredByUserId: porterId,
       })
 
-      // 10 requisições paralelas (nota: Throttle limit é 10/min, aqui disparamos 8 por iteração)
+      // 5 requisições paralelas (<= limite de 5 tentativas de PIN no Redis) para testar Optimistic Locking puro
       const responses = await Promise.all(
-        Array.from({ length: 8 }).map(() =>
+        Array.from({ length: 5 }).map(() =>
           request(ctx.app.getHttpServer())
             .post("/api/v1/packages/checkout")
             .set("Authorization", `Bearer ${porterToken}`)
@@ -61,7 +61,7 @@ describe("Baixa Concorrente com Optimistic Locking (Integração)", () => {
       const conflicts = responses.filter((r) => r.status === 409)
 
       expect(successes).toHaveLength(1)
-      expect(conflicts).toHaveLength(7)
+      expect(conflicts).toHaveLength(4)
 
       const dbPkg = await ctx.prisma.package.findUnique({ where: { id: pkg.id } })
       expect(dbPkg?.status).toBe(PackageStatus.DELIVERED)
