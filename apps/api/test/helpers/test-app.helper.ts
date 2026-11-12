@@ -1,5 +1,5 @@
 import { INestApplication, ValidationPipe } from "@nestjs/common"
-import { APP_GUARD } from "@nestjs/core"
+import { getOptionsToken } from "@nestjs/throttler"
 import { Test } from "@nestjs/testing"
 import { JwtService } from "@nestjs/jwt"
 import { UserRole, PackageStatus } from "@prisma/client"
@@ -97,7 +97,14 @@ export async function createIntegrationTestApp(options?: {
     .useValue(rabbitmq)
 
   if (options?.bypassThrottler) {
-    builder.overrideProvider(APP_GUARD).useValue({ canActivate: () => true })
+    builder.overrideProvider(getOptionsToken()).useValue([
+      {
+        name: "default",
+        ttl: 60000,
+        limit: 120,
+        skipIf: () => true,
+      },
+    ])
   }
 
   const moduleRef = await builder.compile()
