@@ -125,7 +125,7 @@ export class ResidentsService {
       const existingUser = await this.prisma.user.findUnique({
         where: { email: normalizedEmail },
       })
-      if (existingUser && existingUser.id !== current.id && existingUser.role !== UserRole.RESIDENT) {
+      if (existingUser && existingUser.role !== UserRole.RESIDENT) {
         throw new ConflictException(
           `O e-mail ${normalizedEmail} pertence a uma conta de acesso ${existingUser.role} e não pode ser transferido.`
         )
@@ -149,7 +149,7 @@ export class ResidentsService {
 
     if (data.email || data.fullName || data.unitId) {
       await this.prisma.user.updateMany({
-        where: { email: current.email },
+        where: { email: current.email, role: UserRole.RESIDENT },
         data: {
           name: updated.fullName,
           email: updated.email,
@@ -294,6 +294,15 @@ export class ResidentsService {
       }
 
       try {
+        const existingPrivilegedUser = await this.prisma.user.findUnique({
+          where: { email },
+          select: { role: true },
+        })
+        if (existingPrivilegedUser && existingPrivilegedUser.role !== UserRole.RESIDENT) {
+          errors.push(`Linha ${index + 1} (${fullName}): e-mail pertence a uma conta ${existingPrivilegedUser.role}`)
+          continue
+        }
+
         await this.prisma.resident.create({
           data: {
             unitId: targetUnitId,
