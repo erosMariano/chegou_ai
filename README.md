@@ -18,6 +18,7 @@
 ## Sumário
 
 - [Destaques de Engenharia & Decisões Arquiteturais](#destaques-de-engenharia--decisões-arquiteturais)
+- [Evidências Visuais do Fluxo Completo (Do Zero ao PIN)](#evidências-visuais-do-fluxo-completo-do-zero-ao-pin)
 - [Arquitetura de Alto Nível (C4 - Containers)](#arquitetura-de-alto-nível-c4---containers)
 - [Padrões de Projeto & Código Limpo](#padrões-de-projeto--código-limpo)
 - [Segurança Ofensiva & Defensiva (LGPD & OWASP)](#segurança-ofensiva--defensiva-lgpd--owasp)
@@ -41,6 +42,48 @@
 | **Privacidade da imagem da encomenda (LGPD)** | Processamento da imagem estritamente em memória no BFF com descarte imediato (Zero-Storage). | Nenhuma foto de dados pessoais de etiquetas trafega para disco ou S3. |
 | **Integridade de Senhas e PINs** | Hash criptográfico **bcrypt** (salt 10) para senhas e **SHA-256** para PIN de retirada. | Impossibilidade de vazamento de credenciais ou PINs mesmo em caso de dump do banco relacional. |
 | **Anti-Enumeração de Contas** | Respostas uniformes (status e body idênticos) em `forgot-password`. | Atacantes não conseguem mapear quais e-mails existem na base de condôminos. |
+
+---
+
+## Evidências Visuais do Fluxo Completo (Do Zero ao PIN)
+
+Todas as telas abaixo foram capturadas através de automação **Playwright** executada diretamente sobre a versão de produção (`next build` & `next start`, sem overlays ou insights de desenvolvimento), cobrindo o ciclo completo a partir do banco de dados PostgreSQL e Redis 100% zerados:
+
+### 1. Primeiro Acesso e Onboarding do Condomínio (Do Zero)
+| Tela de Login (Alerta de Condomínio Não Inicializado) | Etapa 1 — Criação do Condomínio & Busca Automática por CEP |
+|:---:|:---:|
+| ![Login Banco Zerado](docs/assets/screenshots/01-login-banco-zerado-aviso.png) | ![Criação Condomínio](docs/assets/screenshots/03-criar-condominio-etapa-1-preenchida.png) |
+
+| Etapa 2 — Credenciais do Síndico / Administrador | Login Seguro no Sistema Ativo |
+|:---:|:---:|
+| ![Síndico Admin](docs/assets/screenshots/05-criar-condominio-etapa-2-preenchida.png) | ![Login Sistema Ativo](docs/assets/screenshots/10-login-sistema-ativo.png) |
+
+### 2. Gestão Administrativa (Unidades, Moradores e Portaria)
+| Unidades & Apartamentos Cadastrados | Cadastro de Moradores Vinculados à Unidade (com E-mail) | Email Recebido do usuário após o cadastro |
+|:---:|:---:|:---:|
+| ![Unidades](docs/assets/screenshots/07-admin-unidades-cadastradas.png) | ![Moradores](docs/assets/screenshots/10-admin-moradores-cadastrados.png) |![Moradores](docs/assets/screenshots/20-email-usuario.png) |
+
+| Operadores de Portaria (Controle RBAC) | Configurações Gerais do Condomínio |
+|:---:|:---:|
+| ![Porteiros](docs/assets/screenshots/09-admin-usuarios-porteiro-cadastrado.png) | ![Configurações](docs/assets/screenshots/19-admin-configuracoes.png) |
+
+### 3. Operação de Portaria (Check-in & Checkout de Encomendas)
+| Check-in de Encomenda na Recepção | Confirmação e Registro com Idempotência |
+|:---:|:---:|
+| ![Checkin Preenchido](docs/assets/screenshots/13-portaria-checkin-preenchido.png) | ![Sucesso](docs/assets/screenshots/14-portaria-checkin-sucesso.png) |
+
+| Painel de Encomendas Pendentes na Portaria | Checkout com Validação de PIN de 6 Dígitos |
+|:---:|:---:|
+| ![Pendentes](docs/assets/screenshots/15-portaria-encomenda-pendente.png) | ![Checkout](docs/assets/screenshots/16-portaria-checkout-tela.png) |
+
+### 4. Portal do Morador & Documentação OpenAPI
+| Portal do Morador — Sem Encomendas Esperando (Empty State) | Portal do Morador - Push notification |Portal do Morador — Encomenda com PIN e QR Code Ativo |
+|:---:|:---:|:---:|
+| ![Morador Sem Encomendas](docs/assets/screenshots/11-morador-sem-encomendas-esperando.png) | ![Morador push notification](docs/assets/screenshots/21-push-notification.png) | ![Morador PIN](docs/assets/screenshots/17-morador-portal-encomenda-pin.png) |
+
+| Documentação Interativa Swagger / OpenAPI 3.0 |
+|:---:|
+| ![Swagger Docs](docs/assets/screenshots/18-swagger-api-docs.png) |
 
 ---
 
